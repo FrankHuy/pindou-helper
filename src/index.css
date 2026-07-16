@@ -1,0 +1,4 @@
+html { min-width: 320px; background: #f3f4f1; }
+body { margin: 0; min-width: 320px; min-height: 100dvh; }
+button, label, input { -webkit-tap-highlight-color: transparent; }
+button:focus-visible, label:focus-within, input:focus-visible { outline: 2px solid #1d574b; outline-offset: 2px; }
