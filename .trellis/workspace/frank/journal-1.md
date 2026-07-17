@@ -39,3 +39,37 @@ Shipped real MARD 291 palette with layered ranges/merchant packs/disabled colors
 ### Next Steps
 
 - None - task complete
+
+
+## Session 2: PNG legend and palette highlight
+
+**Date**: 2026-07-17
+**Task**: PNG legend and palette highlight
+**Branch**: `main`
+
+### Summary
+
+Export PNG now includes bottom usage legend (swatch + code:count, sorted). Preview click highlights one color; disable moved to trailing icon. Merged and pushed to main for Cloudflare deploy.
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `3ea3b41` | (see git log) |
+| `253f37d` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
