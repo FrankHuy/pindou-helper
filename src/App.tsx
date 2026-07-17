@@ -45,6 +45,7 @@ function App() {
   const [zoom, setZoom] = useState(14)
   const [showGrid, setShowGrid] = useState(true)
   const [showCodes, setShowCodes] = useState(false)
+  const [highlightCode, setHighlightCode] = useState<string | null>(null)
   const [view, setView] = useState<'pattern' | 'source'>('pattern')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -115,8 +116,17 @@ function App() {
       cellSize: zoom,
       showGrid,
       showCodes,
+      highlightCode,
     })
-  }, [pattern, zoom, showGrid, showCodes])
+  }, [pattern, zoom, showGrid, showCodes, highlightCode])
+
+  useEffect(() => {
+    if (!highlightCode) return
+    const count = pattern?.counts.get(highlightCode) ?? 0
+    if (count <= 0 || disabledColors.has(highlightCode)) {
+      setHighlightCode(null)
+    }
+  }, [highlightCode, pattern, disabledColors])
 
   useEffect(
     () => () => {
@@ -258,11 +268,18 @@ function App() {
 
   const toggleDisabled = (code: string) => {
     const next = new Set(latestRef.current.disabledColors)
-    if (next.has(code)) next.delete(code)
-    else next.add(code)
+    const willDisable = !next.has(code)
+    if (willDisable) next.add(code)
+    else next.delete(code)
+    if (willDisable && highlightCode === code) setHighlightCode(null)
     setDisabledColors(next)
     patchLatest({ disabledColors: next })
     scheduleGenerate()
+  }
+
+  const toggleHighlight = (code: string, count: number, disabled: boolean) => {
+    if (disabled || count <= 0) return
+    setHighlightCode((current) => (current === code ? null : code))
   }
 
   const updateMaxColors = (value: number) => {
@@ -566,20 +583,49 @@ function App() {
             <p className="palette-empty">当前筛选下没有可用颜色</p>
           ) : (
             <div className="color-list">
-              {colorUsage.map((bead) => (
-                <button
-                  type="button"
-                  className={`color-row${bead.disabled ? ' disabled' : ''}`}
-                  key={bead.code}
-                  onClick={() => toggleDisabled(bead.code)}
-                  title={bead.disabled ? '点击启用此色' : '点击禁用此色'}
-                >
-                  <span className="swatch" style={{ backgroundColor: bead.hex }} />
-                  <span className="color-code">{bead.code}</span>
-                  <span className="color-name">{bead.name}</span>
-                  <strong>{bead.disabled ? '禁用' : bead.count}</strong>
-                </button>
-              ))}
+              {colorUsage.map((bead) => {
+                const isHighlighted = highlightCode === bead.code
+                const canHighlight = !bead.disabled && bead.count > 0
+                return (
+                  <div
+                    className={`color-row${bead.disabled ? ' disabled' : ''}${isHighlighted ? ' highlighted' : ''}`}
+                    key={bead.code}
+                  >
+                    <button
+                      type="button"
+                      className="color-row-main"
+                      onClick={() => toggleHighlight(bead.code, bead.count, bead.disabled)}
+                      disabled={!canHighlight}
+                      title={
+                        bead.disabled
+                          ? '此色已禁用'
+                          : bead.count <= 0
+                            ? '此色未使用'
+                            : isHighlighted
+                              ? '取消高亮'
+                              : '高亮此色'
+                      }
+                    >
+                      <span className="swatch" style={{ backgroundColor: bead.hex }} />
+                      <span className="color-code">{bead.code}</span>
+                      <span className="color-name">{bead.name}</span>
+                      <strong>{bead.disabled ? '禁用' : bead.count}</strong>
+                    </button>
+                    <button
+                      type="button"
+                      className="color-disable-btn"
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        toggleDisabled(bead.code)
+                      }}
+                      title={bead.disabled ? '启用此色' : '禁用此色'}
+                      aria-label={bead.disabled ? '启用此色' : '禁用此色'}
+                    >
+                      {bead.disabled ? '↩' : '✕'}
+                    </button>
+                  </div>
+                )
+              })}
             </div>
           )}
         </aside>
