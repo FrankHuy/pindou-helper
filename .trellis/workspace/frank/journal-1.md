@@ -73,3 +73,37 @@ Export PNG now includes bottom usage legend (swatch + code:count, sorted). Previ
 ### Next Steps
 
 - None - task complete
+
+
+## Session 3: Empty cells and background remove modes
+
+**Date**: 2026-07-17
+**Task**: Empty cells and background remove modes
+**Branch**: `main`
+
+### Summary
+
+Added null empty cells, PNG alpha + click-to-sample background remove with tolerance, and photo/illustration process modes with default packs. Merged and pushed to main.
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `359d758` | (see git log) |
+| `545b029` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
