@@ -33,11 +33,12 @@ Stack: Vite + React + TypeScript. Checks: `npm run build` (`tsc -b && vite build
 
 ## Pattern pipeline invariants
 
-1. Adjustments run **before** quantization / palette match
-2. Median-cut only when `0 < maxColors < palette.length`
-3. Final cell colors always come from the active palette (`BeadColor` refs)
+1. Empty mask (alpha + optional bg color-key) is built **before** adjustments; adjustments then run **before** quantization / palette match
+2. Median-cut only when `0 < maxColors < palette.length`, and only on **non-empty** pixels
+3. Final non-empty cell colors always come from the active palette (`BeadColor` refs); empty cells are `null`
 4. Unique colors used in a pattern is **≤ maxColors** when limited (may be strictly less after nearest-palette collapse)
-5. Preview `highlightCode` must not affect `exportPattern` pixels; export always includes usage legend
+5. `counts` / export legend exclude empty cells; total beads = filled cells only
+6. Preview `highlightCode` must not affect `exportPattern` pixels; export always includes usage legend; highlight skips null cells
 
 ---
 

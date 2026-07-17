@@ -46,20 +46,41 @@ Return fields:
 ### `createPattern(file: File, options: PatternOptions): Promise<BeadPattern>`
 
 ```ts
+type PatternCell = BeadColor | null  // null = empty / no bead
+
+type BackgroundRemoveOptions = {
+  enabled: boolean
+  sampleRgb: [number, number, number] | null
+  tolerance: number  // 0–100 UI scale
+}
+
 type PatternOptions = {
   targetWidth: number
   palette: BeadColor[]
   maxColors?: number      // 0 / undefined = unlimited
   adjustments?: ImageAdjustments
+  backgroundRemove?: BackgroundRemoveOptions
+  alphaThreshold?: number // default 16; alpha below → empty
+}
+
+type BeadPattern = {
+  width: number
+  height: number
+  cells: PatternCell[]
+  counts: Map<string, number>  // non-null beads only
+  emptyCount: number
 }
 ```
 
 Pipeline:
 
 1. Decode → canvas scale → `getImageData`
-2. `applyAdjustments` (brightness → contrast → saturation)
-3. If `maxColors > 0 && maxColors < palette.length`: median-cut → map reps to palette
-4. Else: per-pixel `closestColor(palette)`
+2. Build empty mask on **pre-adjust** pixels: `alpha < alphaThreshold` always; optional color-key when `backgroundRemove.enabled && sampleRgb` (max channel delta ≤ `tolerance * 2.55`)
+3. `applyAdjustments` on RGB (preserve alpha)
+4. Quantize / match **only non-empty** pixels:
+   - If `maxColors > 0 && maxColors < palette.length`: median-cut on non-empty → map reps to palette
+   - Else: per-pixel `closestColor(palette)`
+   - Empty mask → `cells[i] = null` (not counted in `counts`)
 5. Empty `palette` → throw `请至少启用一种颜色`
 
 ### `drawPattern` / `exportPattern`

@@ -17,7 +17,7 @@ No global store. All interactive state is local React state in `App.tsx`. Derive
 | Source image | `file`, `imageUrl` | `useState` |
 | View chrome | `zoom`, `showGrid`, `showCodes`, `view`, `highlightCode` | `useState` (no regenerate) |
 | Palette selection | `range`, `merchantPack`, `seriesFilter`, `disabledColors` | `useState` |
-| Quality params | `targetWidth`, `maxColors`, `adjustments` | `useState` |
+| Quality params | `targetWidth`, `maxColors`, `adjustments`, `processMode`, `bgRemoveEnabled`, `bgTolerance`, `bgSampleRgb` | `useState` |
 | Derived | `resolved`, `activePresetId`, `availableSeries` | `useMemo` |
 | Async result | `pattern`, `busy`, `error` | `useState` |
 | Concurrency | `latestRef`, `debounceRef`, `generationRef` | `useRef` |
@@ -60,6 +60,13 @@ Selecting a merchant pack **overrides** range for the active set; UI should dim 
 Changing range or pack should reset `seriesFilter` to `null` to avoid empty intersections.
 
 ---
+
+## Process mode + background remove
+
+- Modes: `photo` | `illustration`. **Switching applies that mode's default pack** (bg toggle, maxColors, adjustments) but **keeps** `bgSampleRgb` if set.
+- Photo defaults: bg remove on, maxColors 24, photo preset. Illustration: bg off, maxColors 16, neutral.
+- Color-key bg remove only when enabled **and** sample present; alpha→empty always.
+- Sampling: `pickingBg` + source image click (map display → natural pixels); include bg fields in `latestRef` for debounced regenerate.
 
 ## Highlight vs disable (palette rows)
 
