@@ -1,13 +1,23 @@
 import type { BeadColor } from './palette'
 import type { ImageAdjustments } from './presets'
 
-export type PatternCell = BeadColor
+export type PatternCell = BeadColor | null
 
 export type BeadPattern = {
   width: number
   height: number
   cells: PatternCell[]
   counts: Map<string, number>
+  /** Number of null (empty / no-bead) cells */
+  emptyCount: number
+}
+
+export type BackgroundRemoveOptions = {
+  enabled: boolean
+  /** Sample from original image; null = not sampled yet */
+  sampleRgb: [number, number, number] | null
+  /** 0–100 UI scale */
+  tolerance: number
 }
 
 export type PatternOptions = {
@@ -16,7 +26,13 @@ export type PatternOptions = {
   /** 0 / undefined = unlimited */
   maxColors?: number
   adjustments?: ImageAdjustments
+  backgroundRemove?: BackgroundRemoveOptions
+  /** alpha below this → empty; default 16 */
+  alphaThreshold?: number
 }
+
+const EMPTY_CELL_FILL = '#f0f2ef'
+const DEFAULT_ALPHA_THRESHOLD = 16
 
 const colorDistance = (rgb: [number, number, number], candidate: BeadColor) => {
   const meanRed = (rgb[0] + candidate.rgb[0]) / 2
@@ -48,7 +64,21 @@ const closestColor = (rgb: [number, number, number], palette: BeadColor[]) => {
 
 const clampByte = (value: number) => Math.max(0, Math.min(255, Math.round(value)))
 
-/** Apply brightness → contrast → saturation in place on ImageData bytes. */
+/** Max channel delta ≤ tolerance * 2.55 (tolerance is 0–100 UI scale). */
+function isNearSample(
+  r: number,
+  g: number,
+  b: number,
+  sample: [number, number, number],
+  tolerance: number,
+): boolean {
+  const maxDelta = tolerance * 2.55
+  return (
+    Math.max(Math.abs(r - sample[0]), Math.abs(g - sample[1]), Math.abs(b - sample[2])) <= maxDelta
+  )
+}
+
+/** Apply brightness → contrast → saturation in place on ImageData bytes (preserve alpha). */
 function applyAdjustments(data: Uint8ClampedArray, adjustments: ImageAdjustments) {
   const { brightness, contrast, saturation } = adjustments
   if (brightness === 0 && contrast === 0 && saturation === 0) return
@@ -202,7 +232,14 @@ function medianCutQuantize(pixels: RgbPixel[], maxColors: number): {
 }
 
 export async function createPattern(file: File, options: PatternOptions): Promise<BeadPattern> {
-  const { targetWidth, palette, maxColors = 0, adjustments } = options
+  const {
+    targetWidth,
+    palette,
+    maxColors = 0,
+    adjustments,
+    backgroundRemove,
+    alphaThreshold = DEFAULT_ALPHA_THRESHOLD,
+  } = options
 
   if (!palette.length) {
     throw new Error('请至少启用一种颜色')
@@ -224,35 +261,79 @@ export async function createPattern(file: File, options: PatternOptions): Promis
 
   const imageData = context.getImageData(0, 0, width, height)
   const pixels = imageData.data
+
+  // Build empty mask on pre-adjust colors (alpha + optional color-key)
+  const pixelCount = width * height
+  const emptyMask = new Uint8Array(pixelCount)
+  const bgEnabled = Boolean(backgroundRemove?.enabled && backgroundRemove.sampleRgb)
+  const sampleRgb = backgroundRemove?.sampleRgb ?? null
+  const tolerance = backgroundRemove?.tolerance ?? 32
+
+  for (let i = 0, p = 0; i < pixels.length; i += 4, p += 1) {
+    const a = pixels[i + 3]
+    if (a < alphaThreshold) {
+      emptyMask[p] = 1
+      continue
+    }
+    if (
+      bgEnabled &&
+      sampleRgb &&
+      isNearSample(pixels[i], pixels[i + 1], pixels[i + 2], sampleRgb, tolerance)
+    ) {
+      emptyMask[p] = 1
+    }
+  }
+
   if (adjustments) applyAdjustments(pixels, adjustments)
 
-  const cells: PatternCell[] = []
+  const cells: PatternCell[] = new Array(pixelCount)
   const counts = new Map<string, number>()
   const shouldQuantize = maxColors > 0 && maxColors < palette.length
 
   if (shouldQuantize) {
+    // Collect only non-empty pixels for median-cut
     const rgbPixels: RgbPixel[] = []
-    for (let index = 0; index < pixels.length; index += 4) {
-      rgbPixels.push([pixels[index], pixels[index + 1], pixels[index + 2]])
+    const nonEmptyIndices: number[] = []
+    for (let p = 0; p < pixelCount; p += 1) {
+      if (emptyMask[p]) {
+        cells[p] = null
+        continue
+      }
+      const i = p * 4
+      rgbPixels.push([pixels[i], pixels[i + 1], pixels[i + 2]])
+      nonEmptyIndices.push(p)
     }
 
-    const { representatives, assignments } = medianCutQuantize(rgbPixels, maxColors)
-    const mapped = representatives.map((rgb) => closestColor(rgb, palette))
+    if (rgbPixels.length > 0) {
+      const { representatives, assignments } = medianCutQuantize(rgbPixels, maxColors)
+      const mapped = representatives.map((rgb) => closestColor(rgb, palette))
 
-    for (const assignment of assignments) {
-      const matched = mapped[assignment]
-      cells.push(matched)
-      counts.set(matched.code, (counts.get(matched.code) ?? 0) + 1)
+      for (let k = 0; k < assignments.length; k += 1) {
+        const matched = mapped[assignments[k]]
+        const p = nonEmptyIndices[k]
+        cells[p] = matched
+        counts.set(matched.code, (counts.get(matched.code) ?? 0) + 1)
+      }
     }
   } else {
-    for (let index = 0; index < pixels.length; index += 4) {
-      const matched = closestColor([pixels[index], pixels[index + 1], pixels[index + 2]], palette)
-      cells.push(matched)
+    for (let p = 0; p < pixelCount; p += 1) {
+      if (emptyMask[p]) {
+        cells[p] = null
+        continue
+      }
+      const i = p * 4
+      const matched = closestColor([pixels[i], pixels[i + 1], pixels[i + 2]], palette)
+      cells[p] = matched
       counts.set(matched.code, (counts.get(matched.code) ?? 0) + 1)
     }
   }
 
-  return { width, height, cells, counts }
+  let emptyCount = 0
+  for (let p = 0; p < pixelCount; p += 1) {
+    if (cells[p] == null) emptyCount += 1
+  }
+
+  return { width, height, cells, counts, emptyCount }
 }
 
 export type DrawOptions = {
@@ -311,7 +392,7 @@ function sizeCanvas(
   return context
 }
 
-function cellBrightness(bead: PatternCell) {
+function cellBrightness(bead: BeadColor) {
   return bead.rgb[0] * 0.299 + bead.rgb[1] * 0.587 + bead.rgb[2] * 0.114
 }
 
@@ -329,10 +410,18 @@ function paintPattern(
   context.fillStyle = background
   context.fillRect(0, originY, logicalWidth, logicalHeight)
 
-  // Fills (+ focus stroke when highlighting)
+  // Fills (+ focus stroke when highlighting non-empty focus cells)
   pattern.cells.forEach((bead, index) => {
     const x = (index % pattern.width) * cellSize
     const y = originY + Math.floor(index / pattern.width) * cellSize
+
+    if (bead == null) {
+      context.globalAlpha = 1
+      context.fillStyle = EMPTY_CELL_FILL
+      context.fillRect(x, y, cellSize, cellSize)
+      return
+    }
+
     const isFocus = !highlightActive || bead.code === highlightCode
 
     context.globalAlpha = isFocus ? 1 : HIGHLIGHT_DIM_ALPHA
@@ -349,7 +438,7 @@ function paintPattern(
 
   context.globalAlpha = 1
 
-  // Grid after fills so structure stays visible under dimming
+  // Grid after fills so structure stays visible under dimming (includes empty cells)
   if (showGrid && cellSize >= 7) {
     context.strokeStyle = 'rgba(31, 35, 34, 0.2)'
     context.lineWidth = 0.5
@@ -368,6 +457,7 @@ function paintPattern(
     context.textBaseline = 'middle'
 
     pattern.cells.forEach((bead, index) => {
+      if (bead == null) return
       const x = (index % pattern.width) * cellSize
       const y = originY + Math.floor(index / pattern.width) * cellSize
       const isFocus = !highlightActive || bead.code === highlightCode
@@ -395,6 +485,7 @@ export function drawPattern(
 export function buildUsageLegend(pattern: BeadPattern): LegendEntry[] {
   const hexByCode = new Map<string, string>()
   for (const cell of pattern.cells) {
+    if (cell == null) continue
     if (!hexByCode.has(cell.code)) hexByCode.set(cell.code, cell.hex)
   }
 

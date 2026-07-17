@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { ChangeEvent } from 'react'
+import type { ChangeEvent, MouseEvent as ReactMouseEvent } from 'react'
 import './App.css'
 import {
   ALL_SERIES,
@@ -22,6 +22,32 @@ import type { ImageAdjustments } from './lib/presets'
 const UploadIcon = () => <span aria-hidden="true">+</span>
 const DownloadIcon = () => <span aria-hidden="true">↓</span>
 
+type ProcessMode = 'photo' | 'illustration'
+
+const MODE_DEFAULTS: Record<
+  ProcessMode,
+  { bgRemoveEnabled: boolean; maxColors: number; adjustments: ImageAdjustments }
+> = {
+  photo: {
+    bgRemoveEnabled: true,
+    maxColors: 24,
+    adjustments: {
+      brightness: IMAGE_PRESETS.photo.brightness,
+      contrast: IMAGE_PRESETS.photo.contrast,
+      saturation: IMAGE_PRESETS.photo.saturation,
+    },
+  },
+  illustration: {
+    bgRemoveEnabled: false,
+    maxColors: 16,
+    adjustments: {
+      brightness: NEUTRAL_PRESET.brightness,
+      contrast: NEUTRAL_PRESET.contrast,
+      saturation: NEUTRAL_PRESET.saturation,
+    },
+  },
+}
+
 const MAX_COLOR_OPTIONS = [
   { value: 0, label: '不限' },
   { value: 8, label: '8' },
@@ -37,6 +63,42 @@ const RANGE_OPTIONS: { id: PaletteRange; label: string; count: number }[] = [
   { id: 'extended', label: '扩展', count: 70 },
 ]
 
+/** Sample RGB at click position, mapping display coords → natural image pixels (object-fit: contain). */
+function sampleImageRgb(
+  img: HTMLImageElement,
+  clientX: number,
+  clientY: number,
+): [number, number, number] | null {
+  const rect = img.getBoundingClientRect()
+  if (rect.width <= 0 || rect.height <= 0) return null
+
+  const naturalW = img.naturalWidth
+  const naturalH = img.naturalHeight
+  if (naturalW <= 0 || naturalH <= 0) return null
+
+  const scale = Math.min(rect.width / naturalW, rect.height / naturalH)
+  const displayW = naturalW * scale
+  const displayH = naturalH * scale
+  const offsetX = (rect.width - displayW) / 2
+  const offsetY = (rect.height - displayH) / 2
+
+  const localX = clientX - rect.left - offsetX
+  const localY = clientY - rect.top - offsetY
+  if (localX < 0 || localY < 0 || localX >= displayW || localY >= displayH) return null
+
+  const px = Math.min(naturalW - 1, Math.max(0, Math.floor((localX / displayW) * naturalW)))
+  const py = Math.min(naturalH - 1, Math.max(0, Math.floor((localY / displayH) * naturalH)))
+
+  const canvas = document.createElement('canvas')
+  canvas.width = naturalW
+  canvas.height = naturalH
+  const ctx = canvas.getContext('2d', { willReadFrequently: true })
+  if (!ctx) return null
+  ctx.drawImage(img, 0, 0)
+  const data = ctx.getImageData(px, py, 1, 1).data
+  return [data[0], data[1], data[2]]
+}
+
 function App() {
   const [file, setFile] = useState<File | null>(null)
   const [imageUrl, setImageUrl] = useState('')
@@ -50,20 +112,27 @@ function App() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
+  const [processMode, setProcessMode] = useState<ProcessMode>('photo')
   const [range, setRange] = useState<PaletteRange>('standard')
   const [merchantPack, setMerchantPack] = useState<MerchantPackSize>(null)
   const [seriesFilter, setSeriesFilter] = useState<string[] | null>(null)
   const [disabledColors, setDisabledColors] = useState<Set<string>>(() => new Set())
-  const [maxColors, setMaxColors] = useState(0)
+  const [maxColors, setMaxColors] = useState(MODE_DEFAULTS.photo.maxColors)
   const [adjustments, setAdjustments] = useState<ImageAdjustments>({
-    brightness: NEUTRAL_PRESET.brightness,
-    contrast: NEUTRAL_PRESET.contrast,
-    saturation: NEUTRAL_PRESET.saturation,
+    ...MODE_DEFAULTS.photo.adjustments,
   })
+  const [bgRemoveEnabled, setBgRemoveEnabled] = useState(MODE_DEFAULTS.photo.bgRemoveEnabled)
+  const [bgTolerance, setBgTolerance] = useState(32)
+  const [bgSampleRgb, setBgSampleRgb] = useState<[number, number, number] | null>(null)
+  const [pickingBg, setPickingBg] = useState(false)
 
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const sourceImageRef = useRef<HTMLImageElement>(null)
   const debounceRef = useRef<number | null>(null)
   const generationRef = useRef(0)
+  /** Keep generate() from yanking the user off the source view while sampling. */
+  const pickingBgRef = useRef(false)
+  pickingBgRef.current = pickingBg
   const latestRef = useRef({
     file,
     targetWidth,
@@ -73,6 +142,9 @@ function App() {
     disabledColors,
     maxColors,
     adjustments,
+    bgRemoveEnabled,
+    bgTolerance,
+    bgSampleRgb,
   })
 
   latestRef.current = {
@@ -84,6 +156,9 @@ function App() {
     disabledColors,
     maxColors,
     adjustments,
+    bgRemoveEnabled,
+    bgTolerance,
+    bgSampleRgb,
   }
 
   const resolved = useMemo(
@@ -157,6 +232,10 @@ function App() {
       })
   }, [pattern, resolved.scopedColors, disabledColors])
 
+  const filledCount = pattern
+    ? pattern.width * pattern.height - pattern.emptyCount
+    : 0
+
   const generate = useCallback(async () => {
     const snapshot = latestRef.current
     if (!snapshot.file) return
@@ -186,10 +265,16 @@ function App() {
         palette: palette.colors,
         maxColors: snapshot.maxColors,
         adjustments: snapshot.adjustments,
+        backgroundRemove: {
+          enabled: snapshot.bgRemoveEnabled,
+          sampleRgb: snapshot.bgSampleRgb,
+          tolerance: snapshot.bgTolerance,
+        },
       })
       if (token !== generationRef.current) return
       setPattern(result)
-      setView('pattern')
+      // Stay on source while user is sampling a background color
+      if (!pickingBgRef.current) setView('pattern')
     } catch (reason) {
       if (token !== generationRef.current) return
       setError(reason instanceof Error ? reason.message : '图纸生成失败，请换一张图片重试。')
@@ -213,8 +298,10 @@ function App() {
     if (imageUrl) URL.revokeObjectURL(imageUrl)
     setFile(nextFile)
     setImageUrl(URL.createObjectURL(nextFile))
+    setBgSampleRgb(null)
+    setPickingBg(false)
     // generate immediately for new file
-    latestRef.current = { ...latestRef.current, file: nextFile }
+    latestRef.current = { ...latestRef.current, file: nextFile, bgSampleRgb: null }
     void generate()
   }
 
@@ -226,6 +313,21 @@ function App() {
     const next = Math.max(8, Math.min(160, value))
     setTargetWidth(next)
     patchLatest({ targetWidth: next })
+    scheduleGenerate()
+  }
+
+  const applyProcessMode = (mode: ProcessMode) => {
+    const defaults = MODE_DEFAULTS[mode]
+    setProcessMode(mode)
+    setBgRemoveEnabled(defaults.bgRemoveEnabled)
+    setMaxColors(defaults.maxColors)
+    setAdjustments({ ...defaults.adjustments })
+    // Keep sampled color; only reset enabled/params from pack
+    patchLatest({
+      bgRemoveEnabled: defaults.bgRemoveEnabled,
+      maxColors: defaults.maxColors,
+      adjustments: { ...defaults.adjustments },
+    })
     scheduleGenerate()
   }
 
@@ -310,8 +412,47 @@ function App() {
     scheduleGenerate()
   }
 
+  const updateBgRemoveEnabled = (enabled: boolean) => {
+    setBgRemoveEnabled(enabled)
+    patchLatest({ bgRemoveEnabled: enabled })
+    if (!enabled) setPickingBg(false)
+    scheduleGenerate()
+  }
+
+  const updateBgTolerance = (value: number) => {
+    const next = Math.max(0, Math.min(100, value))
+    setBgTolerance(next)
+    patchLatest({ bgTolerance: next })
+    scheduleGenerate()
+  }
+
+  const startBgPick = () => {
+    setBgRemoveEnabled(true)
+    setPickingBg(true)
+    setView('source')
+    patchLatest({ bgRemoveEnabled: true })
+    // Re-apply existing sample in the background; stay on source for optional re-pick
+    if (latestRef.current.bgSampleRgb) scheduleGenerate()
+  }
+
+  const handleSourceClick = (event: ReactMouseEvent<HTMLImageElement>) => {
+    if (!pickingBg) return
+    const img = sourceImageRef.current
+    if (!img) return
+    const rgb = sampleImageRgb(img, event.clientX, event.clientY)
+    if (!rgb) return
+    setBgSampleRgb(rgb)
+    setPickingBg(false)
+    patchLatest({ bgSampleRgb: rgb, bgRemoveEnabled: true })
+    scheduleGenerate()
+  }
+
   const maxColorsLabel =
     maxColors > 0 ? `最大 ${maxColors}` : '不限色数'
+
+  const sampleLabel = bgSampleRgb
+    ? `已取色 RGB(${bgSampleRgb[0]}, ${bgSampleRgb[1]}, ${bgSampleRgb[2]})`
+    : '尚未取色'
 
   return (
     <main className="app-shell">
@@ -334,6 +475,27 @@ function App() {
 
       <section className="workspace">
         <aside className="controls">
+          <div className="control-group">
+            <span className="control-label">处理模式</span>
+            <div className="chip-row" role="group" aria-label="处理模式">
+              <button
+                type="button"
+                className={`chip-button${processMode === 'photo' ? ' active' : ''}`}
+                onClick={() => applyProcessMode('photo')}
+              >
+                照片
+              </button>
+              <button
+                type="button"
+                className={`chip-button${processMode === 'illustration' ? ' active' : ''}`}
+                onClick={() => applyProcessMode('illustration')}
+              >
+                插画
+              </button>
+            </div>
+            <p className="control-hint">切换将应用该模式默认参数，之后仍可手改</p>
+          </div>
+
           <div className="control-group">
             <span className="control-label">图纸宽度</span>
             <div className="stepper">
@@ -373,6 +535,43 @@ function App() {
                 </button>
               ))}
             </div>
+          </div>
+
+          <div className="control-group">
+            <span className="control-label">去除背景</span>
+            <label className="toggle-row">
+              <span>启用去底</span>
+              <input
+                type="checkbox"
+                checked={bgRemoveEnabled}
+                onChange={(event) => updateBgRemoveEnabled(event.target.checked)}
+              />
+            </label>
+            <label className="slider-row">
+              <span>容差 {bgTolerance}</span>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                value={bgTolerance}
+                onChange={(event) => updateBgTolerance(Number(event.target.value))}
+              />
+            </label>
+            <button
+              type="button"
+              className={`pick-bg-button${pickingBg ? ' active' : ''}`}
+              onClick={startBgPick}
+              disabled={!imageUrl}
+            >
+              {pickingBg ? '点击原图取样…' : '在原图上取色'}
+            </button>
+            <p className="control-hint sample-hint">
+              {sampleLabel}
+              {bgRemoveEnabled && !bgSampleRgb ? ' · 透明区域始终为空格' : ''}
+            </p>
+            <p className="control-hint">
+              去底为辅助功能，复杂背景请调节容差或换透明底图
+            </p>
           </div>
 
           <div className="control-group">
@@ -479,7 +678,8 @@ function App() {
             </div>
             {pattern && (
               <span className="dimensions">
-                {pattern.width} × {pattern.height} · {pattern.cells.length} 颗 · 用色{' '}
+                {pattern.width} × {pattern.height} · {filledCount} 颗
+                {pattern.emptyCount > 0 ? ` · 空 ${pattern.emptyCount} 格` : ''} · 用色{' '}
                 {pattern.counts.size}
               </span>
             )}
@@ -498,9 +698,18 @@ function App() {
             )}
             {busy && <div className="loading">正在生成图纸…</div>}
             {error && <div className="error-message">{error}</div>}
+            {pickingBg && view === 'source' && (
+              <div className="pick-banner">点击原图背景色取样去除背景</div>
+            )}
             {file && view === 'pattern' && <canvas ref={canvasRef} />}
             {file && view === 'source' && (
-              <img className="source-image" src={imageUrl} alt="上传的原图" />
+              <img
+                ref={sourceImageRef}
+                className={`source-image${pickingBg ? ' picking' : ''}`}
+                src={imageUrl}
+                alt="上传的原图"
+                onClick={handleSourceClick}
+              />
             )}
           </div>
         </section>
