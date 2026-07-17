@@ -37,6 +37,7 @@ Stack: Vite + React + TypeScript. Checks: `npm run build` (`tsc -b && vite build
 2. Median-cut only when `0 < maxColors < palette.length`
 3. Final cell colors always come from the active palette (`BeadColor` refs)
 4. Unique colors used in a pattern is **≤ maxColors** when limited (may be strictly less after nearest-palette collapse)
+5. Preview `highlightCode` must not affect `exportPattern` pixels; export always includes usage legend
 
 ---
 

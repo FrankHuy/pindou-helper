@@ -15,7 +15,7 @@ No global store. All interactive state is local React state in `App.tsx`. Derive
 | Category | Examples | Storage |
 |----------|----------|---------|
 | Source image | `file`, `imageUrl` | `useState` |
-| View chrome | `zoom`, `showGrid`, `showCodes`, `view` | `useState` (no regenerate) |
+| View chrome | `zoom`, `showGrid`, `showCodes`, `view`, `highlightCode` | `useState` (no regenerate) |
 | Palette selection | `range`, `merchantPack`, `seriesFilter`, `disabledColors` | `useState` |
 | Quality params | `targetWidth`, `maxColors`, `adjustments` | `useState` |
 | Derived | `resolved`, `activePresetId`, `availableSeries` | `useMemo` |
@@ -60,6 +60,13 @@ Selecting a merchant pack **overrides** range for the active set; UI should dim 
 Changing range or pack should reset `seriesFilter` to `null` to avoid empty intersections.
 
 ---
+
+## Highlight vs disable (palette rows)
+
+- **Click row body** → toggle `highlightCode` (only if `count > 0` and not disabled). View-only; does not regenerate.
+- **Trailing icon button** → toggle disable (`stopPropagation`); may clear highlight if that code was focused.
+- Clear `highlightCode` when the code becomes disabled or its count drops to 0 after regenerate.
+- **Export PNG never applies highlight**; legend always lists full usage from `pattern.counts`.
 
 ## Preset vs manual sliders
 

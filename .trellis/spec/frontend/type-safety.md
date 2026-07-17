@@ -17,6 +17,7 @@ TypeScript strict project (`tsc -b`). Domain types are explicit; no runtime sche
 | `BeadColor` | `src/lib/palettes/types.ts` | Also re-exported via `src/lib/palette.ts` |
 | `PaletteRange`, `MerchantPackSize`, `PaletteSelection`, `ResolvedPalette` | `palettes/types.ts` | Selection is UI → resolve input |
 | `PatternOptions`, `BeadPattern`, `PatternCell` | `src/lib/pattern.ts` | Pipeline contract |
+| `DrawOptions`, `LegendEntry` | `src/lib/pattern.ts` | Preview draw + export legend |
 | `ImageAdjustments` | `src/lib/presets.ts` | Shared by presets + pattern |
 
 `BeadColor` required fields: `brand`, `series`, `code`, `name`, `hex`, `rgb`.  
@@ -60,6 +61,21 @@ Pipeline:
 3. If `maxColors > 0 && maxColors < palette.length`: median-cut → map reps to palette
 4. Else: per-pixel `closestColor(palette)`
 5. Empty `palette` → throw `请至少启用一种颜色`
+
+### `drawPattern` / `exportPattern`
+
+```ts
+type DrawOptions = {
+  cellSize: number
+  showGrid: boolean
+  showCodes: boolean
+  background?: string
+  highlightCode?: string | null  // preview only
+}
+```
+
+- `highlightCode` dims non-matching cells and strokes the focus color; **export must pass null/omit**.
+- `exportPattern` always appends a bottom legend from `pattern.counts` (swatch + `code:count`, count desc) with title「用色统计」.
 
 ---
 
