@@ -1,0 +1,9 @@
+{"file": "requirements/competitive-research-and-priorities.md", "reason": "竞品调研与 P0 需求来源"}
+{"file": "requirements/mard-color-layers.md", "reason": "色卡分层逻辑与产品接入建议"}
+{"file": "requirements/mard-color-chart.json", "reason": "291 色完整色卡源数据"}
+{"file": "requirements/mard-merchant-packs.json", "reason": "11 个商家套装 code 列表源数据"}
+{"file": ".trellis/spec/frontend/index.md", "reason": "前端规约入口"}
+{"file": ".trellis/spec/frontend/type-safety.md", "reason": "TypeScript 类型约定"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "代码质量与 lint 要求"}
+{"file": ".trellis/spec/frontend/state-management.md", "reason": "React 状态管理约定"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "组件与 UI 约定"}

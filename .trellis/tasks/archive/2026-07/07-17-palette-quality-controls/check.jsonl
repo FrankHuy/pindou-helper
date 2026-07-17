@@ -1,0 +1,5 @@
+{"file": ".trellis/spec/frontend/index.md", "reason": "前端规约入口"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "质量检查与 lint 约定"}
+{"file": ".trellis/spec/frontend/type-safety.md", "reason": "类型检查约定"}
+{"file": "requirements/mard-color-layers.md", "reason": "验收色卡分层是否与数据源一致"}
+{"file": "requirements/competitive-research-and-priorities.md", "reason": "P0 需求与验收对照"}
