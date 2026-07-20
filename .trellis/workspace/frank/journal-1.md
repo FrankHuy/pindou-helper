@@ -177,3 +177,38 @@ Fixed download clarity by constructing sns-img-hw original URLs from note fileId
 ### Next Steps
 
 - None - task complete
+
+
+## Session 6: Privacy About pages and Turnstile on parse
+
+**Date**: 2026-07-20
+**Task**: Privacy About pages and Turnstile on parse
+**Branch**: `main`
+
+### Summary
+
+Added /privacy (bead-only policy) and /about (email + unlabeled tip QRs), footer navigation, and Cloudflare Turnstile protection on POST /api/xhs/parse with secret env + local bypass; updated specs and README.
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `7044680` | (see git log) |
+| `33024dc` | (see git log) |
+| `d8e66cc` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

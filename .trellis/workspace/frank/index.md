@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 5
+- **Total Sessions**: 6
 - **Last Active**: 2026-07-20
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~179 | Active |
+| `journal-1.md` | ~214 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 6 | 2026-07-20 | Privacy About pages and Turnstile on parse | `7044680`, `33024dc`, `d8e66cc` | `main` |
 | 5 | 2026-07-20 | XHS original image quality via fileId CDN | `dd420e6`, `276facd`, `3a74433` | `main` |
 | 4 | 2026-07-20 | XHS image download tab | `a97d018`, `9646250`, `e9568c9` | `main` |
 | 3 | 2026-07-17 | Empty cells and background remove modes | `359d758`, `545b029` | `main` |
