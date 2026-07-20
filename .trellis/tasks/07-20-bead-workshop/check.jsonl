@@ -1,1 +1,5 @@
-{"_example": "Fill with {\"file\": \"<path>\", \"reason\": \"<why>\"}. Put spec/research files only — no code paths. Run `python3 .trellis/scripts/get_context.py --mode packages` to list available specs. Delete this line once real entries are added."}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "Verify no forbidden deps, local-only processing, disclaimer, lint/build gates"}
+{"file": ".trellis/spec/frontend/directory-structure.md", "reason": "Verify workshop files land in agreed layout"}
+{"file": ".trellis/tasks/07-20-bead-workshop/prd.md", "reason": "Acceptance criteria AC1–AC7 mapping"}
+{"file": ".trellis/tasks/07-20-bead-workshop/design.md", "reason": "Architecture contracts for grid fallback and split UX"}
+{"file": ".trellis/tasks/07-20-bead-workshop/implement.md", "reason": "Checklist and validation commands for check pass"}

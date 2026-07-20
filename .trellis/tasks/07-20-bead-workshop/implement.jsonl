@@ -1,1 +1,5 @@
-{"_example": "Fill with {\"file\": \"<path>\", \"reason\": \"<why>\"}. Put spec/research files only — no code paths. Run `python3 .trellis/scripts/get_context.py --mode packages` to list available specs. Delete this line once real entries are added."}
+{"file": ".trellis/spec/frontend/directory-structure.md", "reason": "Where to place workshop feature + lib modules and App shell conventions"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "No new runtime deps, local-only bead privacy, highlight/export invariants, screen-color disclaimer"}
+{"file": ".trellis/spec/frontend/xhs-download.md", "reason": "Tab mount is-hidden pattern and shell tab list must stay compatible when adding workshop"}
+{"file": ".trellis/tasks/07-20-bead-workshop/design.md", "reason": "Full technical design for split/legend/grid/pixel pipeline"}
+{"file": ".trellis/tasks/07-20-bead-workshop/prd.md", "reason": "Product requirements and acceptance criteria"}
