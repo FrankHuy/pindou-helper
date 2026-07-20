@@ -190,7 +190,9 @@ export default function BeadWorkshopTab() {
     if (imgRect.height <= 0) return
 
     const localY = clientY - imgRect.top
-    const ratio = Math.max(0.4, Math.min(0.92, localY / imgRect.height))
+    // Almost full range; final pixel clamp is clampSplitY (1px margins only).
+    const raw = localY / imgRect.height
+    const ratio = Math.max(0, Math.min(1, raw))
     setSplitRatio(ratio)
   }
 

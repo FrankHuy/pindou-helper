@@ -15,7 +15,7 @@
 ## 2. Pipeline
 
 1. Decode → `ImageData`
-2. `estimateSplitY` or user `splitY` (clamp pattern ≥40%, legend ≥8%)
+2. `estimateSplitY` or user `splitY` (`clampSplitY`: only 1px margins so both regions non-empty; **no** large % floor on user drag)
 3. Legend region → swatch sample → nearest **full MARD** codes (dedupe)
 4. If no swatches → mine unique colors from pattern region + Chinese hint
 5. Pattern region mapped with restricted palette + empty rule A

@@ -51,10 +51,15 @@ export function estimateSplitY(imageData: ImageData): number {
   return clampSplitY(splitY, h)
 }
 
+/**
+ * Clamp split Y so both pattern (y < split) and legend (y >= split) keep at least
+ * a few pixels. No large percentage floor — users may place the handle anywhere.
+ */
 export function clampSplitY(splitY: number, imageHeight: number): number {
-  const minPattern = Math.floor(imageHeight * 0.4)
-  const maxPattern = Math.floor(imageHeight * 0.92)
-  return Math.max(minPattern, Math.min(maxPattern, Math.round(splitY)))
+  if (imageHeight <= 2) return Math.max(0, Math.min(imageHeight, Math.round(splitY)))
+  const minY = 1
+  const maxY = imageHeight - 1
+  return Math.max(minY, Math.min(maxY, Math.round(splitY)))
 }
 
 type RowScore = { activity: number; brightness: number }
