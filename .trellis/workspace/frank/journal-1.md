@@ -107,3 +107,38 @@ Added null empty cells, PNG alpha + click-to-sample background remove with toler
 ### Next Steps
 
 - None - task complete
+
+
+## Session 4: XHS image download tab
+
+**Date**: 2026-07-20
+**Task**: XHS image download tab
+**Branch**: `main`
+
+### Summary
+
+Shipped independent 小红书下图 tab with Cloudflare Worker parse/proxy APIs, frontend lightbox save UX, README privacy notes, and frontend XHS contract specs. Local wrangler preview blocked by host GLIBC; build/lint passed.
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `a97d018` | (see git log) |
+| `9646250` | (see git log) |
+| `e9568c9` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
