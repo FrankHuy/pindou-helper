@@ -78,3 +78,39 @@ export function highestImageUrl(image: NoteImage): string {
   }
   throw new Error('IMAGE_URL_MISSING')
 }
+
+const FILE_ID_RE = /^[A-Za-z0-9_-]+$/
+
+/** Reject empty / path-injection fileId values before constructing CDN URLs. */
+export function isValidFileId(fileId: unknown): fileId is string {
+  if (typeof fileId !== 'string') return false
+  const id = fileId.trim()
+  if (!id) return false
+  // Block path / query injection even on allowlisted hosts.
+  if (/[/?#\s]/.test(id)) return false
+  return FILE_ID_RE.test(id)
+}
+
+/**
+ * Build competitor-style original image URL from fileId.
+ * Force format/jpg so bare HEIC containers are not returned.
+ */
+export function originalUrlFromFileId(
+  fileId: string,
+  host = 'sns-img-hw.xhscdn.com',
+): string {
+  if (!isValidFileId(fileId)) {
+    throw new Error('INVALID_FILE_ID')
+  }
+  return `https://${host}/${encodeURIComponent(fileId.trim())}?imageView2/2/w/0/format/jpg`
+}
+
+/**
+ * Prefer original sns-img CDN from fileId; fall back to public-page infoList URLs.
+ */
+export function resolveImageSourceUrl(image: NoteImage): string {
+  if (isValidFileId(image.fileId)) {
+    return originalUrlFromFileId(image.fileId)
+  }
+  return highestImageUrl(image)
+}

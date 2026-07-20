@@ -30,6 +30,8 @@ export type NoteImage = {
   urlDefault?: string
   url?: string
   urlPre?: string
+  /** Opaque media id used to construct original sns-img CDN URLs. */
+  fileId?: string
   width?: number
   height?: number
 }

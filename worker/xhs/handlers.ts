@@ -1,5 +1,11 @@
 import { isAllowedShareTarget, normalizeImageUrl, parseShareUrl } from './allowlist'
-import { findNote, highestImageUrl, stateFromPage } from './parse'
+import {
+  findNote,
+  highestImageUrl,
+  isValidFileId,
+  resolveImageSourceUrl,
+  stateFromPage,
+} from './parse'
 import { fetchWithAllowedRedirects } from './redirect'
 import type { XhsErrorBody, XhsImageItem, XhsParseSuccess } from './types'
 import { UA } from './types'
@@ -119,14 +125,31 @@ export async function parseNote(request: Request): Promise<Response> {
   const images: XhsImageItem[] = []
   for (let i = 0; i < note.imageList.length; i++) {
     const image = note.imageList[i]
-    let sourceUrl: string
+    // Prefer fileId original CDN (resolveImageSourceUrl); if that URL fails
+    // allowlist normalize, try infoList fallback. Skip only when both fail.
+    const candidates: string[] = []
     try {
-      sourceUrl = highestImageUrl(image).replace(/^http:\/\//i, 'https://')
+      candidates.push(resolveImageSourceUrl(image))
     } catch {
-      continue
+      // no usable source from fileId or infoList
     }
-    const normalized = normalizeImageUrl(sourceUrl)
+    // When fileId won, still queue public-page URL so normalize failure can recover.
+    if (isValidFileId(image.fileId)) {
+      try {
+        candidates.push(highestImageUrl(image))
+      } catch {
+        // no public-page derivative either
+      }
+    }
+
+    let normalized: URL | null = null
+    for (const raw of candidates) {
+      const sourceUrl = raw.replace(/^http:\/\//i, 'https://')
+      normalized = normalizeImageUrl(sourceUrl)
+      if (normalized) break
+    }
     if (!normalized) continue
+
     images.push({
       index: i + 1,
       width: typeof image.width === 'number' ? image.width : 0,
