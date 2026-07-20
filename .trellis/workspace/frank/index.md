@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 6
+- **Total Sessions**: 7
 - **Last Active**: 2026-07-20
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~214 | Active |
+| `journal-1.md` | ~249 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 7 | 2026-07-20 | 拼豆工作间：图纸上传与色号高亮 | `8894b43`, `2453460`, `e731604` | `main` |
 | 6 | 2026-07-20 | Privacy About pages and Turnstile on parse | `7044680`, `33024dc`, `d8e66cc` | `main` |
 | 5 | 2026-07-20 | XHS original image quality via fileId CDN | `dd420e6`, `276facd`, `3a74433` | `main` |
 | 4 | 2026-07-20 | XHS image download tab | `a97d018`, `9646250`, `e9568c9` | `main` |

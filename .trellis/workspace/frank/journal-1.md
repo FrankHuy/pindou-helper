@@ -212,3 +212,38 @@ Added /privacy (bead-only policy) and /about (email + unlabeled tip QRs), footer
 ### Next Steps
 
 - None - task complete
+
+
+## Session 7: 拼豆工作间：图纸上传与色号高亮
+
+**Date**: 2026-07-20
+**Task**: 拼豆工作间：图纸上传与色号高亮
+**Branch**: `main`
+
+### Summary
+
+新增独立 Tab「拼豆工作间」：本地上传上图下图例图纸，自动/可拖分隔线，图例色块匹配 MARD（无 OCR），格点重建优先、失败像素掩膜，dim 单色高亮；抽取 color-match；补 workshop code-spec 与目录文档；check 修复分析失败后仍可调分隔重试。
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `8894b43` | (see git log) |
+| `2453460` | (see git log) |
+| `e731604` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
