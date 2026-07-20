@@ -142,3 +142,38 @@ Shipped independent 小红书下图 tab with Cloudflare Worker parse/proxy APIs,
 ### Next Steps
 
 - None - task complete
+
+
+## Session 5: XHS original image quality via fileId CDN
+
+**Date**: 2026-07-20
+**Task**: XHS original image quality via fileId CDN
+**Branch**: `main`
+
+### Summary
+
+Fixed download clarity by constructing sns-img-hw original URLs from note fileId (imageView2/w/0/format/jpg), with infoList fallback; verified ~1948x2560/568KB on sample; updated XHS download specs and README.
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `dd420e6` | (see git log) |
+| `276facd` | (see git log) |
+| `3a74433` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
