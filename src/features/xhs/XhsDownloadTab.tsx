@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { FormEvent, KeyboardEvent } from 'react'
 import type { XhsParseResult } from './xhsApi'
-import { extractFirstUrl, parseXhsNote, saveImage } from './xhsApi'
+import { extractFirstUrl, fetchPublicConfig, parseXhsNote, saveImage } from './xhsApi'
 import './xhs.css'
 
 type Phase = 'idle' | 'loading' | 'success' | 'error'
 
-const TURNSTILE_SITE_KEY = (import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined)?.trim() ?? ''
+/** Optional build-time fallback; runtime /api/config is preferred for CF Git deploys. */
+const BUILD_TURNSTILE_SITE_KEY =
+  (import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined)?.trim() ?? ''
 
 type TurnstileApi = {
   render: (
@@ -43,6 +45,8 @@ function loadTurnstileScript(): Promise<void> {
       existing.addEventListener('error', () => reject(new Error('Turnstile 脚本加载失败')), {
         once: true,
       })
+      // Script tag exists; if turnstile already present resolve immediately.
+      if (window.turnstile) resolve()
       return
     }
     const script = document.createElement('script')
@@ -65,6 +69,9 @@ export default function XhsDownloadTab() {
   const [saving, setSaving] = useState(false)
   const [saveHint, setSaveHint] = useState('')
   const [turnstileToken, setTurnstileToken] = useState('')
+  const [turnstileSiteKey, setTurnstileSiteKey] = useState(BUILD_TURNSTILE_SITE_KEY)
+  const [turnstileServerRequired, setTurnstileServerRequired] = useState(false)
+  const [configReady, setConfigReady] = useState(!BUILD_TURNSTILE_SITE_KEY)
   const parseAbortRef = useRef<AbortController | null>(null)
   const parseGenRef = useRef(0)
   const turnstileHostRef = useRef<HTMLDivElement | null>(null)
@@ -75,7 +82,10 @@ export default function XhsDownloadTab() {
   const images = result?.images ?? []
   const activeImage =
     lightboxIndex != null && images[lightboxIndex] ? images[lightboxIndex] : null
-  const turnstileRequired = Boolean(TURNSTILE_SITE_KEY)
+  // Show widget whenever we have a site key (runtime or build-time).
+  const turnstileRequired = Boolean(turnstileSiteKey)
+  // If Worker enforces secret but site key is missing, surface a setup error.
+  const turnstileMisconfigured = turnstileServerRequired && !turnstileSiteKey && configReady
 
   const resetTurnstile = useCallback(() => {
     turnstileTokenRef.current = ''
@@ -96,17 +106,47 @@ export default function XhsDownloadTab() {
     }
   }, [])
 
+  // Load site key from Worker runtime so CF Git deploys work without Vite bake-in.
   useEffect(() => {
-    if (!TURNSTILE_SITE_KEY) return
+    const controller = new AbortController()
+    void (async () => {
+      try {
+        const config = await fetchPublicConfig(controller.signal)
+        if (config.turnstileSiteKey) {
+          setTurnstileSiteKey(config.turnstileSiteKey)
+        } else if (BUILD_TURNSTILE_SITE_KEY) {
+          setTurnstileSiteKey(BUILD_TURNSTILE_SITE_KEY)
+        }
+        setTurnstileServerRequired(config.turnstileRequired)
+      } catch {
+        // Keep build-time key if any; parse may still work when secret unset.
+        if (BUILD_TURNSTILE_SITE_KEY) setTurnstileSiteKey(BUILD_TURNSTILE_SITE_KEY)
+      } finally {
+        setConfigReady(true)
+      }
+    })()
+    return () => controller.abort()
+  }, [])
+
+  // Render Turnstile only after site key is known and host node is mounted.
+  useEffect(() => {
+    if (!turnstileSiteKey) return
     let cancelled = false
 
     void (async () => {
       try {
         await loadTurnstileScript()
-        if (cancelled || !turnstileHostRef.current || !window.turnstile) return
+        if (cancelled || !window.turnstile) return
+
+        // Host is rendered only when turnstileSiteKey is set; wait a frame for ref.
+        await new Promise<void>((resolve) => {
+          requestAnimationFrame(() => resolve())
+        })
+        if (cancelled || !turnstileHostRef.current) return
         if (turnstileWidgetIdRef.current != null) return
+
         turnstileWidgetIdRef.current = window.turnstile.render(turnstileHostRef.current, {
-          sitekey: TURNSTILE_SITE_KEY,
+          sitekey: turnstileSiteKey,
           theme: 'light',
           callback: (token: string) => {
             turnstileTokenRef.current = token
@@ -139,8 +179,10 @@ export default function XhsDownloadTab() {
         }
       }
       turnstileWidgetIdRef.current = null
+      turnstileTokenRef.current = ''
+      setTurnstileToken('')
     }
-  }, [])
+  }, [turnstileSiteKey])
 
   const runParse = useCallback(
     async (raw: string) => {
@@ -148,6 +190,15 @@ export default function XhsDownloadTab() {
       if (!text) {
         setPhase('error')
         setError('请粘贴小红书分享链接')
+        setResult(null)
+        return
+      }
+
+      if (turnstileMisconfigured) {
+        setPhase('error')
+        setError(
+          '人机验证未正确配置：服务端已开启校验，但缺少公开 Site Key。请在 Worker 运行时变量中设置 TURNSTILE_SITE_KEY（或 VITE_TURNSTILE_SITE_KEY）。',
+        )
         setResult(null)
         return
       }
@@ -189,7 +240,7 @@ export default function XhsDownloadTab() {
         }
       }
     },
-    [resetTurnstile, turnstileRequired],
+    [resetTurnstile, turnstileMisconfigured, turnstileRequired],
   )
 
   const handleSubmit = (event: FormEvent) => {
@@ -287,7 +338,11 @@ export default function XhsDownloadTab() {
     }
   }
 
-  const parseDisabled = loading || (turnstileRequired && !turnstileToken)
+  const parseDisabled =
+    loading ||
+    turnstileMisconfigured ||
+    (turnstileRequired && !turnstileToken) ||
+    (!configReady && turnstileServerRequired)
 
   return (
     <div className="xhs-tab">
@@ -312,6 +367,16 @@ export default function XhsDownloadTab() {
             onPaste={handlePasteNormalize}
             onKeyDown={onInputKeyDown}
           />
+
+          {turnstileMisconfigured && (
+            <div className="xhs-status xhs-status-error" role="alert">
+              <p>
+                服务端已开启人机校验，但未提供 Site Key，因此无法显示验证框。请在 Cloudflare Worker
+                <strong>运行时</strong>变量中增加{' '}
+                <code>TURNSTILE_SITE_KEY</code>（Site Key，公开）并重新部署。
+              </p>
+            </div>
+          )}
 
           {turnstileRequired && (
             <div className="xhs-turnstile-wrap">

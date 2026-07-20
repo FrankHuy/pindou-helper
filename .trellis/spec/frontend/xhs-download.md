@@ -78,7 +78,8 @@ Request:
 
 Turnstile (anti-abuse, **parse only**):
 
-- Frontend widget when `VITE_TURNSTILE_SITE_KEY` is set; token sent as `turnstileToken`.
+- `GET /api/config` returns `{ turnstileSiteKey, turnstileRequired }` from Worker runtime (`TURNSTILE_SITE_KEY` or `VITE_TURNSTILE_SITE_KEY`, plus whether `TURNSTILE_SECRET` is set).
+- Frontend loads site key from `/api/config` (preferred) or build-time `VITE_TURNSTILE_SITE_KEY` fallback; renders widget; token sent as `turnstileToken`.
 - Worker calls Cloudflare `siteverify` when `TURNSTILE_SECRET` is set; if secret unset, verification is skipped (local/dev).
 - `/api/xhs/image` is **not** Turnstile-protected.
 
@@ -121,7 +122,10 @@ Every redirect hop is validated (`fetchWithAllowedRedirects`, `redirect: 'manual
 ### Environment
 
 - No XHS login cookies.
-- Optional Turnstile: `VITE_TURNSTILE_SITE_KEY` (public, Vite), `TURNSTILE_SECRET` (Worker secret via Wrangler).
+- Optional Turnstile (Worker runtime preferred):
+  - `TURNSTILE_SITE_KEY` (public site key; alias `VITE_TURNSTILE_SITE_KEY` also read at runtime)
+  - `TURNSTILE_SECRET` (Worker secret)
+  - Optional build fallback: `VITE_TURNSTILE_SITE_KEY` for local Vite-only
 - Browser UA similar to demo Chrome UA; image fetch sets `Referer: https://www.xiaohongshu.com/`.
 
 ---

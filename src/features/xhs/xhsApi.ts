@@ -18,6 +18,30 @@ export type XhsApiError = {
   message: string
 }
 
+export type PublicAppConfig = {
+  /** Public Turnstile site key from Worker runtime (or null if unset). */
+  turnstileSiteKey: string | null
+  /** True when Worker has TURNSTILE_SECRET and will require a token. */
+  turnstileRequired: boolean
+}
+
+/** Fetch non-secret client config from the Worker (runtime bindings). */
+export async function fetchPublicConfig(signal?: AbortSignal): Promise<PublicAppConfig> {
+  const response = await fetch('/api/config', { method: 'GET', signal })
+  if (!response.ok) {
+    throw new Error('无法加载站点配置')
+  }
+  const data = (await response.json()) as Partial<PublicAppConfig>
+  const key =
+    typeof data.turnstileSiteKey === 'string' && data.turnstileSiteKey.trim()
+      ? data.turnstileSiteKey.trim()
+      : null
+  return {
+    turnstileSiteKey: key,
+    turnstileRequired: Boolean(data.turnstileRequired),
+  }
+}
+
 /** Pull the first http(s) URL from share-card text. */
 export function extractFirstUrl(text: string): string | null {
   const match = text.match(/https?:\/\/[^\s<>"']+/i)
