@@ -40,7 +40,8 @@ button { color: inherit; }
 }
 
 .workspace { display: grid; grid-template-columns: 220px minmax(0, 1fr) 246px; min-height: calc(100dvh - 64px - 42px); }
-.workspace.is-hidden { display: none; }
+.workspace.is-hidden,
+.workshop-host.is-hidden { display: none; }
 .controls, .palette-panel { background: #fff; padding: 20px 18px; }
 .controls { border-right: 1px solid #dfe2dd; }
 .palette-panel { border-left: 1px solid #dfe2dd; min-width: 0; }
@@ -152,7 +153,8 @@ input[type="range"] { width: 100%; accent-color: #1d574b; }
   .app-tabs { top: 58px; padding: 0 8px; }
   .app-tab { flex: 1; min-height: 40px; padding: 0 8px; font-size: 12px; }
   .workspace { display: flex; flex-direction: column; min-height: calc(100dvh - 58px - 40px); }
-  .workspace.is-hidden { display: none; }
+  .workspace.is-hidden,
+  .workshop-host.is-hidden { display: none; }
   .stage-panel { order: 1; min-height: 62dvh; }
   .controls { order: 2; border-right: 0; border-top: 1px solid #dfe2dd; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 18px; }
   .palette-panel { order: 3; }

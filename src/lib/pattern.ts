@@ -1,3 +1,4 @@
+import { closestColor } from './color-match'
 import type { BeadColor } from './palette'
 import type { ImageAdjustments } from './presets'
 
@@ -33,34 +34,6 @@ export type PatternOptions = {
 
 const EMPTY_CELL_FILL = '#f0f2ef'
 const DEFAULT_ALPHA_THRESHOLD = 16
-
-const colorDistance = (rgb: [number, number, number], candidate: BeadColor) => {
-  const meanRed = (rgb[0] + candidate.rgb[0]) / 2
-  const red = rgb[0] - candidate.rgb[0]
-  const green = rgb[1] - candidate.rgb[1]
-  const blue = rgb[2] - candidate.rgb[2]
-
-  return Math.sqrt(
-    (2 + meanRed / 256) * red * red +
-      4 * green * green +
-      (2 + (255 - meanRed) / 256) * blue * blue,
-  )
-}
-
-const closestColor = (rgb: [number, number, number], palette: BeadColor[]) => {
-  let closest = palette[0]
-  let closestDistance = Number.POSITIVE_INFINITY
-
-  for (const candidate of palette) {
-    const distance = colorDistance(rgb, candidate)
-    if (distance < closestDistance) {
-      closest = candidate
-      closestDistance = distance
-    }
-  }
-
-  return closest
-}
 
 const clampByte = (value: number) => Math.max(0, Math.min(255, Math.round(value)))
 
@@ -373,7 +346,7 @@ type LegendLayout = {
   swatchSize: number
 }
 
-const HIGHLIGHT_DIM_ALPHA = 0.38
+export const HIGHLIGHT_DIM_ALPHA = 0.38
 
 function sizeCanvas(
   canvas: HTMLCanvasElement,

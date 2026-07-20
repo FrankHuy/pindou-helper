@@ -4,6 +4,7 @@ import './App.css'
 import AboutPage from './features/info/AboutPage'
 import PrivacyPage from './features/info/PrivacyPage'
 import './features/info/info.css'
+import BeadWorkshopTab from './features/workshop/BeadWorkshopTab'
 import XhsDownloadTab from './features/xhs/XhsDownloadTab'
 import {
   ALL_SERIES,
@@ -26,7 +27,7 @@ import type { ImageAdjustments } from './lib/presets'
 const UploadIcon = () => <span aria-hidden="true">+</span>
 const DownloadIcon = () => <span aria-hidden="true">↓</span>
 
-type AppTab = 'bead' | 'xhs'
+type AppTab = 'bead' | 'workshop' | 'xhs'
 type ShellPage = 'app' | 'privacy' | 'about'
 
 function shellPageFromPath(pathname: string): ShellPage {
@@ -512,7 +513,13 @@ function App() {
         </div>
         <div className="brand-copy">
           <h1>拼豆图纸助手</h1>
-          <p>{tab === 'bead' ? '图片仅在当前设备处理' : '公开帖高清图下载'}</p>
+          <p>
+            {tab === 'bead'
+              ? '图片仅在当前设备处理'
+              : tab === 'workshop'
+                ? '按色高亮已有图纸'
+                : '公开帖高清图下载'}
+          </p>
         </div>
         {tab === 'bead' && (
           <label className="icon-command upload-command" title="上传图片">
@@ -530,6 +537,14 @@ function App() {
           aria-current={tab === 'bead' ? 'page' : undefined}
         >
           拼豆图纸
+        </button>
+        <button
+          type="button"
+          className={`app-tab${tab === 'workshop' ? ' active' : ''}`}
+          onClick={() => setTab('workshop')}
+          aria-current={tab === 'workshop' ? 'page' : undefined}
+        >
+          拼豆工作间
         </button>
         <button
           type="button"
@@ -907,6 +922,14 @@ function App() {
             </div>
           )}
         </aside>
+      </section>
+
+      {/* Keep workshop mounted so highlight / result survive tab switches. */}
+      <section
+        className={`workshop-host${tab === 'workshop' ? '' : ' is-hidden'}`}
+        aria-hidden={tab !== 'workshop'}
+      >
+        <BeadWorkshopTab />
       </section>
 
       {tab === 'xhs' && <XhsDownloadTab />}
