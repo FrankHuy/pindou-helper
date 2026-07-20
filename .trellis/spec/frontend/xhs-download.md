@@ -38,10 +38,20 @@ Wrangler: `main` + `assets.run_worker_first: ["/api/*"]` + `assets.binding: "ASS
 ```ts
 stateFromPage(page: string): unknown
 findNote(state: unknown): NoteRecord
+isValidFileId(fileId: unknown): fileId is string
+originalUrlFromFileId(fileId: string, host?: string): string
+resolveImageSourceUrl(image: NoteImage): string
 highestImageUrl(image: NoteImage): string
 ```
 
-Priority for `highestImageUrl`: `WB_DFT` → `WB_ORI` → `WB_PRV` → `urlDefault` / `url` / `urlPre`.
+Image source selection (`resolveImageSourceUrl`):
+
+1. Valid `fileId` → original CDN  
+   `https://sns-img-hw.xhscdn.com/{fileId}?imageView2/2/w/0/format/jpg`  
+   (`fileId` must match `[A-Za-z0-9_-]+`; reject `/` `?` `#` spaces)
+2. Else `highestImageUrl`: `WB_DFT` → `WB_ORI` → `WB_PRV` → `urlDefault` / `url` / `urlPre`
+
+Public pages often only expose ~1080 `WB_DFT` webpic derivatives; `fileId` recovers near-original pixels when available. Force `format/jpg` (bare fileId may be HEIC).
 
 ### Frontend client (`src/features/xhs/xhsApi.ts`)
 
@@ -140,15 +150,16 @@ Frontend maps `!response.ok` → `Error(message)` and validates success payload 
 Minimum gates:
 
 1. `npm run build` / `npm run lint` clean for `src/` + `worker/` (ignore unrelated `.pi` warnings unless introduced by the task).
-2. Allowlist unit-style checks: reject non-XHS share/image hosts; accept `*.xhscdn.com`.
-3. Parser: fixture HTML with `:undefined` + mixed `infoList` scenes → prefers `WB_DFT`.
-4. Manual / preview when workerd available: invalid URL, login-wall style missing state, bead tab regression.
+2. Allowlist unit-style checks: reject non-XHS share/image hosts; accept `*.xhscdn.com` (incl. `sns-img-hw.xhscdn.com`).
+3. Parser: fixture HTML with `:undefined` + mixed `infoList` scenes → prefers `WB_DFT` when no fileId; with valid fileId → `sns-img-hw` original URL.
+4. Manual / preview when workerd available: invalid URL, login-wall style missing state, bead tab regression; sample note with fileId downloads original-class dims (not only ~1080).
 
 Assertion points:
 
 - UI `img` / `saveImage` only use paths starting with `/api/xhs/image`.
 - Bead workspace stays mounted (`is-hidden`) when switching tabs so generation state is preserved.
 - No ZIP / cookie / login-bypass code paths.
+- Invalid fileId (path chars) never becomes a CDN path segment.
 
 ---
 
