@@ -6,7 +6,8 @@
 
 ## Overview
 
-Single-package Vite + React + TypeScript app. Domain logic lives under `src/lib/`; UI is thin in `src/App.tsx` (+ `App.css`).
+Single-package Vite + React + TypeScript app with an optional Cloudflare Worker for the XHS tab.
+Bead domain logic lives under `src/lib/`; shell UI in `src/App.tsx`; XHS feature under `src/features/xhs/` + `worker/`.
 
 ---
 
@@ -14,10 +15,15 @@ Single-package Vite + React + TypeScript app. Domain logic lives under `src/lib/
 
 ```
 src/
-├── App.tsx                 # UI state, controls, debounced generate orchestration
+├── App.tsx                 # Shell tabs + bead UI state / debounced generate
 ├── App.css
 ├── main.tsx
 ├── index.css
+├── features/
+│   └── xhs/                # Independent “小红书下图” tab (no bead imports)
+│       ├── XhsDownloadTab.tsx
+│       ├── xhsApi.ts       # parse/save client helpers
+│       └── xhs.css
 └── lib/
     ├── palette.ts          # Re-export shell (compat path)
     ├── pattern.ts          # Image → bead pattern pipeline
@@ -28,9 +34,20 @@ src/
         ├── mard-packs.ts   # Merchant pack code lists (exact codes, not slice)
         ├── resolve.ts      # Layered selection → active colors
         └── index.ts
+
+worker/
+├── index.ts                # Cloudflare Worker entry (/api/*)
+└── xhs/                    # Parse + proxy (port of scripts/xhs_image_demo.py)
+    ├── handlers.ts
+    ├── parse.ts
+    ├── proxy.ts
+    ├── allowlist.ts
+    ├── redirect.ts
+    └── types.ts
 ```
 
 Source chart data used to *generate* palette constants lives in repo root `requirements/` (not imported at runtime).
+Offline XHS demo: `scripts/xhs_image_demo.py` (not a production runtime).
 
 ---
 
@@ -43,7 +60,9 @@ Source chart data used to *generate* palette constants lives in repo root `requi
 | Selection → active set | `src/lib/palettes/resolve.ts` | Pure function; no React |
 | Pattern generation | `src/lib/pattern.ts` | Canvas/ImageData only; no UI imports |
 | Image presets | `src/lib/presets.ts` | Shared adjustment values + match helper |
-| UI wiring | `src/App.tsx` | State + debounce + canvas draw/export |
+| Bead UI wiring | `src/App.tsx` | State + debounce + canvas draw/export; keep mounted when hiding tab |
+| XHS UI + client API | `src/features/xhs/*` | Talks only to same-origin `/api/xhs/*` |
+| XHS Worker | `worker/xhs/*` | Host allowlists, parse INITIAL_STATE, image proxy + Referer |
 
 ### Adding a new brand (COCO / 漫漫 / …)
 

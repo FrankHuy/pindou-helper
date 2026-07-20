@@ -17,8 +17,10 @@ Stack: Vite + React + TypeScript. Checks: `npm run build` (`tsc -b && vite build
 | New runtime deps for median-cut / color math | PRD: self-implement; keep PWA offline-friendly |
 | `colors.slice(0, N)` for merchant packs | Packs are non-contiguous code lists (e.g. 264 missing C29) |
 | Reintroduce old 33-color MVP palette | Code/HEX conflict with real MARD |
-| Server upload of user images | Privacy product promise — Canvas/local only |
+| Server upload of user images (bead path) | Privacy product promise — Canvas/local only |
 | Silent empty palette matching | Must throw / UI error when no colors enabled |
+| Browser hotlink of XHS CDN / open proxy | CORS/Referer fail; SSRF — use `/api/xhs/image` + allowlists |
+| Login Cookie / private-note bypass for XHS | Compliance boundary; public posts only |
 
 ---
 
