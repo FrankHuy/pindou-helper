@@ -6,8 +6,8 @@
 
 ## Overview
 
-Vite + React + TypeScript PWA: local image → MARD bead pattern conversion, plus an optional Worker-backed Xiaohongshu public-image download tab.
-Bead domain logic in `src/lib/`; bead UI orchestration in `src/App.tsx`; XHS feature in `src/features/xhs/` + `worker/`.
+Vite + React + TypeScript PWA: local image → MARD bead pattern conversion, import/highlight of existing pattern sheets, plus an optional Worker-backed Xiaohongshu public-image download tab.
+Bead domain logic in `src/lib/`; bead UI orchestration in `src/App.tsx`; workshop in `src/features/workshop/` + `src/lib/workshop/`; XHS feature in `src/features/xhs/` + `worker/`.
 
 ---
 
@@ -20,9 +20,13 @@ Before changing generation or palette code, read:
 3. [State Management](./state-management.md) — debounce + latest-ref regenerate pattern
 4. [Quality Guidelines](./quality-guidelines.md) — forbidden pack/slice and MVP-palette rules
 
+Before changing the bead workshop (import sheet / highlight), also read:
+
+5. [Workshop](./workshop.md) — split / legend / grid|pixel contracts (local only, no OCR)
+
 Before changing XHS download / Worker APIs, also read:
 
-5. [XHS Download](./xhs-download.md) — parse/proxy contracts, allowlists, error matrix
+6. [XHS Download](./xhs-download.md) — parse/proxy contracts, allowlists, error matrix
 
 ---
 
@@ -36,6 +40,7 @@ Before changing XHS download / Worker APIs, also read:
 | [State Management](./state-management.md) | Local state, regenerate orchestration | Filled |
 | [Quality Guidelines](./quality-guidelines.md) | Code standards, forbidden patterns | Filled |
 | [Type Safety](./type-safety.md) | Palette / pattern contracts | Filled |
+| [Workshop](./workshop.md) | Import pattern sheet + color highlight | Filled |
 | [XHS Download](./xhs-download.md) | Worker parse/proxy + tab contracts | Filled |
 
 ---
@@ -47,6 +52,13 @@ Before changing XHS download / Worker APIs, also read:
 3. **Exact pack codes** — never derive packs by `slice(0, N)`.
 4. **Median-cut then map to palette** — final colors always bead codes; count ≤ maxColors.
 5. **No new runtime deps** for quantization / adjustments.
+
+## Design Decisions (workshop tab)
+
+1. **Consume sheets, do not generate** — complementary to bead tab; local Canvas only.
+2. **No OCR** — legend swatches → nearest MARD; shared `color-match` metric with pattern pipeline.
+3. **Grid then pixel** — prefer `BeadPattern` + `drawPattern`; strict gates then pixel mask fallback.
+4. **Keep-alive mount** — workshop section uses `is-hidden` like bead so highlight state survives tab switches.
 
 ## Design Decisions (XHS tab)
 

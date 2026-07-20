@@ -7,7 +7,7 @@
 ## Overview
 
 Single-package Vite + React + TypeScript app with an optional Cloudflare Worker for the XHS tab.
-Bead domain logic lives under `src/lib/`; shell UI in `src/App.tsx`; XHS feature under `src/features/xhs/` + `worker/`.
+Bead domain logic lives under `src/lib/`; shell UI in `src/App.tsx`; feature tabs under `src/features/` + `worker/` for XHS.
 
 ---
 
@@ -24,14 +24,27 @@ src/
 │   │   ├── PrivacyPage.tsx
 │   │   ├── AboutPage.tsx
 │   │   └── info.css
+│   ├── workshop/           # “拼豆工作间” tab (import existing pattern sheets)
+│   │   ├── BeadWorkshopTab.tsx
+│   │   └── workshop.css
 │   └── xhs/                # Independent “小红书下图” tab (no bead imports)
 │       ├── XhsDownloadTab.tsx
 │       ├── xhsApi.ts       # parse/save client helpers
 │       └── xhs.css
 └── lib/
+    ├── color-match.ts      # Shared RGB distance + closestColor
     ├── palette.ts          # Re-export shell (compat path)
-    ├── pattern.ts          # Image → bead pattern pipeline
+    ├── pattern.ts          # Image → bead pattern pipeline + draw/export
     ├── presets.ts          # Image adjustment presets
+    ├── workshop/           # Pure analyze for imported pattern sheets (no React)
+    │   ├── analyze.ts      # Orchestrate split / legend / grid|pixel
+    │   ├── split.ts
+    │   ├── legend.ts
+    │   ├── grid.ts
+    │   ├── pixel.ts
+    │   ├── empty.ts
+    │   ├── image-data.ts
+    │   └── types.ts
     └── palettes/           # Multi-brand-ready palette data + resolve
         ├── types.ts
         ├── mard-colors.ts  # Full brand color table (generated from requirements JSON)
@@ -65,9 +78,12 @@ Offline XHS demo: `scripts/xhs_image_demo.py` (not a production runtime).
 | Brand color tables | `src/lib/palettes/*-colors.ts` | One file per brand; pure data + series constants |
 | Merchant / retail packs | `src/lib/palettes/*-packs.ts` | Exact `code[]` per pack size |
 | Selection → active set | `src/lib/palettes/resolve.ts` | Pure function; no React |
+| Shared color distance | `src/lib/color-match.ts` | Used by pattern + workshop; single metric |
 | Pattern generation | `src/lib/pattern.ts` | Canvas/ImageData only; no UI imports |
+| Workshop analyze | `src/lib/workshop/*` | Pure TS; local Canvas only; no OCR / no network |
 | Image presets | `src/lib/presets.ts` | Shared adjustment values + match helper |
 | Bead UI wiring | `src/App.tsx` | State + debounce + canvas draw/export; keep mounted when hiding tab |
+| Workshop UI | `src/features/workshop/*` | Own upload + split handle; keep-alive via `is-hidden` |
 | XHS UI + client API | `src/features/xhs/*` | Talks only to same-origin `/api/xhs/*` |
 | XHS Worker | `worker/xhs/*` | Host allowlists, parse INITIAL_STATE, image proxy + Referer |
 
@@ -91,3 +107,4 @@ Offline XHS demo: `scripts/xhs_image_demo.py` (not a production runtime).
 
 - Palette layering: `src/lib/palettes/resolve.ts`
 - Pattern options contract: `src/lib/pattern.ts` → `PatternOptions`
+- Workshop analyze: `src/lib/workshop/analyze.ts` → `analyzeWorkshopFile` / `analyzeWorkshopImageData`
