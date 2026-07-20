@@ -1,0 +1,4 @@
+{"file": ".trellis/spec/frontend/xhs-download.md", "reason": "Extend parse contract with turnstileToken and error code"}
+{"file": ".trellis/spec/frontend/directory-structure.md", "reason": "Where to place info pages / public assets"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "UI copy and forbidden patterns"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "Component placement conventions if filled"}

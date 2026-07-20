@@ -1,0 +1,3 @@
+{"file": ".trellis/spec/frontend/xhs-download.md", "reason": "API contract and SSRF rules must still hold with Turnstile"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "No secret leakage; build/lint gates"}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "FE token ↔ Worker siteverify boundary"}
