@@ -1,0 +1,4 @@
+{"file": ".trellis/spec/frontend/xhs-download.md", "reason": "Validate parse/proxy contracts, SSRF allowlist, error matrix still hold"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "No open proxy / cookie bypass; lint/build gates"}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "API↔Worker↔CDN boundary consistency for proxyPath"}
+{"file": ".trellis/tasks/07-20-xhs-original-image-quality/research/2026-07-20-original-cdn.md", "reason": "Acceptance sample URL dimensions/size"}

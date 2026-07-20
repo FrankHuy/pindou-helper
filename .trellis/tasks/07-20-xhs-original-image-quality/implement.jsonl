@@ -1,0 +1,4 @@
+{"file": ".trellis/spec/frontend/xhs-download.md", "reason": "Current XHS Worker/UI contracts and allowlists to extend with fileId original priority"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "Forbidden hotlink/open-proxy rules still apply"}
+{"file": ".trellis/spec/frontend/directory-structure.md", "reason": "worker/xhs module layout"}
+{"file": ".trellis/tasks/07-20-xhs-original-image-quality/research/2026-07-20-original-cdn.md", "reason": "Verified sns-img fileId URL measurements"}
