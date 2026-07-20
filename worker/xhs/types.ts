@@ -6,6 +6,7 @@ export type XhsErrorCode =
   | 'not_image_note'
   | 'parse_failed'
   | 'upstream_failed'
+  | 'turnstile_failed'
 
 export type XhsErrorBody = {
   error: XhsErrorCode

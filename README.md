@@ -53,7 +53,26 @@ npm run deploy
 
 - Build command: `npm run build`
 - 以 Wrangler 配置（`wrangler.jsonc`）为准部署 Worker + SPA assets
-- Environment variables: 暂不需要
+
+### Turnstile 防刷（可选但推荐生产开启）
+
+仅保护 `POST /api/xhs/parse`（图片代理不校验）：
+
+1. 在 Cloudflare Dashboard 创建 Turnstile 站点，取得 **Site Key** 与 **Secret Key**
+2. 构建时设置公开站点密钥，例如：
+
+```bash
+export VITE_TURNSTILE_SITE_KEY=your_site_key
+npm run build
+```
+
+3. 为 Worker 配置密钥（勿写入仓库）：
+
+```bash
+npx wrangler secret put TURNSTILE_SECRET
+```
+
+本地未配置 `TURNSTILE_SECRET` 时，解析接口会跳过人机校验，便于开发。
 
 部署后可以在 iPhone/iPad Safari 中打开站点，选择“分享 → 添加到主屏幕”。
 
@@ -61,7 +80,8 @@ npm run deploy
 
 色卡数据位于 `src/lib/palettes/`（MARD 全表与商家套装码表）。`src/lib/palette.ts` 为兼容 re-export。
 
-## 隐私
+## 隐私与关于
 
+- 站内页面：`/privacy`（隐私政策）、`/about`（关于 / 联系 / 可选打赏）
 - **拼豆图纸**：图片处理全部发生在浏览器本地：`File input → Canvas → ImageData → 图纸`。不会上传你的本地照片。
-- **小红书下图**：会将你粘贴的**分享链接**发送到本站 Cloudflare Worker；Worker 代为请求小红书公开页面与图片 CDN（不携带、不存储你的登录 Cookie）。请仅用于公开且你有权保存的素材。
+- **小红书下图**：会将你粘贴的**分享链接**发送到本站 Cloudflare Worker；Worker 代为请求小红书公开页面与图片 CDN（不携带、不存储你的登录 Cookie）。请仅用于公开且你有权保存的素材。生产环境建议开启 Turnstile 限制解析刷量。

@@ -54,6 +54,15 @@
   opacity: 0.65;
 }
 
+.xhs-turnstile-wrap {
+  margin-top: 12px;
+}
+
+.xhs-turnstile {
+  margin-top: 8px;
+  min-height: 65px;
+}
+
 .xhs-actions {
   display: flex;
   flex-wrap: wrap;

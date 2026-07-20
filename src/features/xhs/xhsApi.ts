@@ -46,12 +46,15 @@ function isXhsParseResult(data: unknown): data is XhsParseResult {
 export async function parseXhsNote(
   input: string,
   signal?: AbortSignal,
+  turnstileToken?: string,
 ): Promise<XhsParseResult> {
   const extracted = extractFirstUrl(input) ?? input.trim()
+  const payload: { url: string; turnstileToken?: string } = { url: extracted }
+  if (turnstileToken) payload.turnstileToken = turnstileToken
   const response = await fetch('/api/xhs/parse', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ url: extracted }),
+    body: JSON.stringify(payload),
     signal,
   })
 

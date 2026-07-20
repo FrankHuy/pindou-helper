@@ -7,8 +7,13 @@ import {
   stateFromPage,
 } from './parse'
 import { fetchWithAllowedRedirects } from './redirect'
+import { verifyTurnstileToken } from './turnstile'
 import type { XhsErrorBody, XhsImageItem, XhsParseSuccess } from './types'
 import { UA } from './types'
+
+export type ParseEnv = {
+  TURNSTILE_SECRET?: string
+}
 
 function jsonError(status: number, error: XhsErrorBody['error'], message: string): Response {
   const body: XhsErrorBody = { error, message }
@@ -29,7 +34,7 @@ function buildProxyPath(imageUrl: string): string {
 }
 
 /** POST /api/xhs/parse — fetch share page, parse INITIAL_STATE, return proxy paths. */
-export async function parseNote(request: Request): Promise<Response> {
+export async function parseNote(request: Request, env: ParseEnv = {}): Promise<Response> {
   let body: unknown
   try {
     body = await request.json()
@@ -37,13 +42,34 @@ export async function parseNote(request: Request): Promise<Response> {
     return jsonError(400, 'invalid_url', '请求体必须是 JSON，包含 url 字段')
   }
 
-  const rawInput =
-    body && typeof body === 'object' && 'url' in body
-      ? String((body as { url: unknown }).url ?? '')
-      : ''
+  const bodyRecord =
+    body && typeof body === 'object' ? (body as Record<string, unknown>) : null
+
+  const rawInput = bodyRecord && 'url' in bodyRecord ? String(bodyRecord.url ?? '') : ''
 
   if (!rawInput.trim()) {
     return jsonError(400, 'invalid_url', '请粘贴小红书分享链接')
+  }
+
+  // Anti-abuse: only when secret is configured (production). Local/dev without secret bypasses.
+  const secret = env.TURNSTILE_SECRET?.trim()
+  if (secret) {
+    const token =
+      bodyRecord && 'turnstileToken' in bodyRecord
+        ? String(bodyRecord.turnstileToken ?? '')
+        : ''
+    const remoteip =
+      request.headers.get('CF-Connecting-IP') ??
+      request.headers.get('X-Forwarded-For')?.split(',')[0]?.trim() ??
+      undefined
+    const verified = await verifyTurnstileToken(secret, token, remoteip)
+    if (!verified.ok) {
+      const message =
+        verified.reason === 'missing_token'
+          ? '请完成人机验证后再解析'
+          : '人机验证失败，请刷新验证后重试'
+      return jsonError(403, 'turnstile_failed', message)
+    }
   }
 
   const extracted = extractFirstUrl(rawInput) ?? rawInput.trim()

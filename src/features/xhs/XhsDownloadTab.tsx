@@ -6,6 +6,56 @@ import './xhs.css'
 
 type Phase = 'idle' | 'loading' | 'success' | 'error'
 
+const TURNSTILE_SITE_KEY = (import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined)?.trim() ?? ''
+
+type TurnstileApi = {
+  render: (
+    container: HTMLElement,
+    options: {
+      sitekey: string
+      callback?: (token: string) => void
+      'expired-callback'?: () => void
+      'error-callback'?: () => void
+      theme?: 'light' | 'dark' | 'auto'
+    },
+  ) => string | number
+  reset: (widgetId?: string | number) => void
+  remove?: (widgetId?: string | number) => void
+}
+
+declare global {
+  interface Window {
+    turnstile?: TurnstileApi
+  }
+}
+
+let turnstileScriptPromise: Promise<void> | null = null
+
+function loadTurnstileScript(): Promise<void> {
+  if (typeof window === 'undefined') return Promise.resolve()
+  if (window.turnstile) return Promise.resolve()
+  if (turnstileScriptPromise) return turnstileScriptPromise
+
+  turnstileScriptPromise = new Promise((resolve, reject) => {
+    const existing = document.querySelector<HTMLScriptElement>('script[data-turnstile]')
+    if (existing) {
+      existing.addEventListener('load', () => resolve(), { once: true })
+      existing.addEventListener('error', () => reject(new Error('Turnstile 脚本加载失败')), {
+        once: true,
+      })
+      return
+    }
+    const script = document.createElement('script')
+    script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit'
+    script.async = true
+    script.dataset.turnstile = '1'
+    script.onload = () => resolve()
+    script.onerror = () => reject(new Error('Turnstile 脚本加载失败'))
+    document.head.appendChild(script)
+  })
+  return turnstileScriptPromise
+}
+
 export default function XhsDownloadTab() {
   const [input, setInput] = useState('')
   const [phase, setPhase] = useState<Phase>('idle')
@@ -14,13 +64,31 @@ export default function XhsDownloadTab() {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
   const [saving, setSaving] = useState(false)
   const [saveHint, setSaveHint] = useState('')
+  const [turnstileToken, setTurnstileToken] = useState('')
   const parseAbortRef = useRef<AbortController | null>(null)
   const parseGenRef = useRef(0)
+  const turnstileHostRef = useRef<HTMLDivElement | null>(null)
+  const turnstileWidgetIdRef = useRef<string | number | null>(null)
+  const turnstileTokenRef = useRef('')
 
   const loading = phase === 'loading'
   const images = result?.images ?? []
   const activeImage =
     lightboxIndex != null && images[lightboxIndex] ? images[lightboxIndex] : null
+  const turnstileRequired = Boolean(TURNSTILE_SITE_KEY)
+
+  const resetTurnstile = useCallback(() => {
+    turnstileTokenRef.current = ''
+    setTurnstileToken('')
+    const id = turnstileWidgetIdRef.current
+    if (id != null && window.turnstile) {
+      try {
+        window.turnstile.reset(id)
+      } catch {
+        // ignore reset races
+      }
+    }
+  }, [])
 
   useEffect(() => {
     return () => {
@@ -28,40 +96,101 @@ export default function XhsDownloadTab() {
     }
   }, [])
 
-  const runParse = useCallback(async (raw: string) => {
-    const text = raw.trim()
-    if (!text) {
-      setPhase('error')
-      setError('请粘贴小红书分享链接')
-      setResult(null)
-      return
-    }
+  useEffect(() => {
+    if (!TURNSTILE_SITE_KEY) return
+    let cancelled = false
 
-    parseAbortRef.current?.abort()
-    const controller = new AbortController()
-    parseAbortRef.current = controller
-    const gen = ++parseGenRef.current
+    void (async () => {
+      try {
+        await loadTurnstileScript()
+        if (cancelled || !turnstileHostRef.current || !window.turnstile) return
+        if (turnstileWidgetIdRef.current != null) return
+        turnstileWidgetIdRef.current = window.turnstile.render(turnstileHostRef.current, {
+          sitekey: TURNSTILE_SITE_KEY,
+          theme: 'light',
+          callback: (token: string) => {
+            turnstileTokenRef.current = token
+            setTurnstileToken(token)
+          },
+          'expired-callback': () => {
+            turnstileTokenRef.current = ''
+            setTurnstileToken('')
+          },
+          'error-callback': () => {
+            turnstileTokenRef.current = ''
+            setTurnstileToken('')
+          },
+        })
+      } catch {
+        if (!cancelled) {
+          setError('人机验证组件加载失败，请刷新页面后重试')
+        }
+      }
+    })()
 
-    setPhase('loading')
-    setError('')
-    setResult(null)
-    setLightboxIndex(null)
-    setSaveHint('')
-
-    try {
-      const data = await parseXhsNote(text, controller.signal)
-      if (gen !== parseGenRef.current) return
-      setResult(data)
-      setPhase('success')
-    } catch (reason) {
-      if (gen !== parseGenRef.current) return
-      if (reason instanceof DOMException && reason.name === 'AbortError') return
-      if (reason instanceof Error && reason.name === 'AbortError') return
-      setPhase('error')
-      setResult(null)
-      setError(reason instanceof Error ? reason.message : '解析失败，请稍后重试')
+    return () => {
+      cancelled = true
+      const id = turnstileWidgetIdRef.current
+      if (id != null && window.turnstile?.remove) {
+        try {
+          window.turnstile.remove(id)
+        } catch {
+          // ignore
+        }
+      }
+      turnstileWidgetIdRef.current = null
     }
   }, [])
+
+  const runParse = useCallback(
+    async (raw: string) => {
+      const text = raw.trim()
+      if (!text) {
+        setPhase('error')
+        setError('请粘贴小红书分享链接')
+        setResult(null)
+        return
+      }
+
+      if (turnstileRequired && !turnstileTokenRef.current) {
+        setPhase('error')
+        setError('请先完成人机验证')
+        setResult(null)
+        return
+      }
+
+      parseAbortRef.current?.abort()
+      const controller = new AbortController()
+      parseAbortRef.current = controller
+      const gen = ++parseGenRef.current
+      const tokenSnapshot = turnstileTokenRef.current
+
+      setPhase('loading')
+      setError('')
+      setResult(null)
+      setLightboxIndex(null)
+      setSaveHint('')
+
+      try {
+        const data = await parseXhsNote(text, controller.signal, tokenSnapshot || undefined)
+        if (gen !== parseGenRef.current) return
+        setResult(data)
+        setPhase('success')
+      } catch (reason) {
+        if (gen !== parseGenRef.current) return
+        if (reason instanceof DOMException && reason.name === 'AbortError') return
+        if (reason instanceof Error && reason.name === 'AbortError') return
+        setPhase('error')
+        setResult(null)
+        setError(reason instanceof Error ? reason.message : '解析失败，请稍后重试')
+      } finally {
+        if (gen === parseGenRef.current) {
+          resetTurnstile()
+        }
+      }
+    },
+    [resetTurnstile, turnstileRequired],
+  )
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault()
@@ -70,7 +199,6 @@ export default function XhsDownloadTab() {
   }
 
   const handlePasteNormalize = () => {
-    // After paste settles, try to surface the first URL in the field.
     window.setTimeout(() => {
       setInput((current) => {
         const url = extractFirstUrl(current)
@@ -159,6 +287,8 @@ export default function XhsDownloadTab() {
     }
   }
 
+  const parseDisabled = loading || (turnstileRequired && !turnstileToken)
+
   return (
     <div className="xhs-tab">
       <section className="xhs-panel">
@@ -182,8 +312,16 @@ export default function XhsDownloadTab() {
             onPaste={handlePasteNormalize}
             onKeyDown={onInputKeyDown}
           />
+
+          {turnstileRequired && (
+            <div className="xhs-turnstile-wrap">
+              <span className="xhs-label">人机验证</span>
+              <div ref={turnstileHostRef} className="xhs-turnstile" />
+            </div>
+          )}
+
           <div className="xhs-actions">
-            <button type="submit" className="xhs-primary" disabled={loading}>
+            <button type="submit" className="xhs-primary" disabled={parseDisabled}>
               {loading ? '解析中…' : '解析图片'}
             </button>
             {input && !loading && (
@@ -225,9 +363,7 @@ export default function XhsDownloadTab() {
           <div className="xhs-result">
             <div className="xhs-result-head">
               <h3>{result.title}</h3>
-              <span>
-                共 {result.images.length} 张 · 点击缩略图放大后保存
-              </span>
+              <span>共 {result.images.length} 张 · 点击缩略图放大后保存</span>
             </div>
             <div className="xhs-grid" role="list">
               {result.images.map((image, index) => (
@@ -256,10 +392,7 @@ export default function XhsDownloadTab() {
           aria-label="图片预览"
           onClick={closeLightbox}
         >
-          <div
-            className="xhs-lightbox-inner"
-            onClick={(event) => event.stopPropagation()}
-          >
+          <div className="xhs-lightbox-inner" onClick={(event) => event.stopPropagation()}>
             <div className="xhs-lightbox-toolbar">
               <span>
                 {activeImage.index} / {images.length}
@@ -306,9 +439,7 @@ export default function XhsDownloadTab() {
               >
                 {saving ? '保存中…' : '保存图片'}
               </button>
-              <p className="xhs-save-hint">
-                也可长按图片，用系统菜单保存。两种方式均可。
-              </p>
+              <p className="xhs-save-hint">也可长按图片，用系统菜单保存。两种方式均可。</p>
               {saveHint && <p className="xhs-save-feedback">{saveHint}</p>}
             </div>
           </div>

@@ -5,6 +5,8 @@ export interface Env {
   ASSETS: {
     fetch: (request: Request) => Promise<Response>
   }
+  /** Cloudflare Turnstile secret; when unset, parse skips verification (local dev). */
+  TURNSTILE_SECRET?: string
 }
 
 function apiNotFound(): Response {
@@ -29,7 +31,7 @@ export default {
         })
       }
       if (request.method !== 'POST') return methodNotAllowed()
-      return parseNote(request)
+      return parseNote(request, env)
     }
 
     if (url.pathname === '/api/xhs/image') {

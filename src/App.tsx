@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ChangeEvent, MouseEvent as ReactMouseEvent } from 'react'
 import './App.css'
+import AboutPage from './features/info/AboutPage'
+import PrivacyPage from './features/info/PrivacyPage'
+import './features/info/info.css'
 import XhsDownloadTab from './features/xhs/XhsDownloadTab'
 import {
   ALL_SERIES,
@@ -24,6 +27,13 @@ const UploadIcon = () => <span aria-hidden="true">+</span>
 const DownloadIcon = () => <span aria-hidden="true">↓</span>
 
 type AppTab = 'bead' | 'xhs'
+type ShellPage = 'app' | 'privacy' | 'about'
+
+function shellPageFromPath(pathname: string): ShellPage {
+  if (pathname === '/privacy' || pathname.endsWith('/privacy')) return 'privacy'
+  if (pathname === '/about' || pathname.endsWith('/about')) return 'about'
+  return 'app'
+}
 
 type ProcessMode = 'photo' | 'illustration'
 
@@ -103,6 +113,9 @@ function sampleImageRgb(
 }
 
 function App() {
+  const [shellPage, setShellPage] = useState<ShellPage>(() =>
+    typeof window !== 'undefined' ? shellPageFromPath(window.location.pathname) : 'app',
+  )
   const [tab, setTab] = useState<AppTab>('bead')
   const [file, setFile] = useState<File | null>(null)
   const [imageUrl, setImageUrl] = useState('')
@@ -164,6 +177,20 @@ function App() {
     bgTolerance,
     bgSampleRgb,
   }
+
+  const navigateShell = useCallback((page: ShellPage) => {
+    const path = page === 'app' ? '/' : `/${page}`
+    if (window.location.pathname !== path) {
+      window.history.pushState({ shellPage: page }, '', path)
+    }
+    setShellPage(page)
+  }, [])
+
+  useEffect(() => {
+    const onPop = () => setShellPage(shellPageFromPath(window.location.pathname))
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [])
 
   const resolved = useMemo(
     () =>
@@ -457,6 +484,22 @@ function App() {
   const sampleLabel = bgSampleRgb
     ? `已取色 RGB(${bgSampleRgb[0]}, ${bgSampleRgb[1]}, ${bgSampleRgb[2]})`
     : '尚未取色'
+
+  if (shellPage === 'privacy') {
+    return (
+      <main className="app-shell">
+        <PrivacyPage onBack={() => navigateShell('app')} />
+      </main>
+    )
+  }
+
+  if (shellPage === 'about') {
+    return (
+      <main className="app-shell">
+        <AboutPage onBack={() => navigateShell('app')} />
+      </main>
+    )
+  }
 
   return (
     <main className="app-shell">
@@ -867,6 +910,18 @@ function App() {
       </section>
 
       {tab === 'xhs' && <XhsDownloadTab />}
+
+      <footer className="app-footer">
+        <button type="button" onClick={() => navigateShell('privacy')}>
+          隐私政策
+        </button>
+        <span className="app-footer-sep" aria-hidden="true">
+          ·
+        </span>
+        <button type="button" onClick={() => navigateShell('about')}>
+          关于
+        </button>
+      </footer>
     </main>
   )
 }

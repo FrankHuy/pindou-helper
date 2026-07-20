@@ -1,0 +1,150 @@
+/* Privacy / About info pages */
+
+.info-page {
+  min-height: 100dvh;
+  background: #f3f4f1;
+  color: #202523;
+}
+
+.info-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 56px;
+  padding: 0 14px;
+  background: #fff;
+  border-bottom: 1px solid #dfe2dd;
+}
+
+.info-topbar h1 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 750;
+}
+
+.info-back {
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid #d7dcd7;
+  background: #f6f7f5;
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.info-article {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 20px 18px 48px;
+  line-height: 1.65;
+  font-size: 14px;
+}
+
+.info-lead {
+  margin: 0 0 18px;
+  color: #3f4743;
+}
+
+.info-article h2 {
+  margin: 22px 0 8px;
+  font-size: 15px;
+  font-weight: 750;
+}
+
+.info-article p,
+.info-article ul {
+  margin: 0 0 12px;
+  color: #3a423e;
+}
+
+.info-article ul {
+  padding-left: 1.2em;
+}
+
+.info-article a {
+  color: #1d574b;
+  font-weight: 650;
+}
+
+.info-email {
+  font-size: 15px;
+  word-break: break-all;
+}
+
+.info-updated {
+  margin-top: 28px;
+  color: #8a928e;
+  font-size: 12px;
+}
+
+.info-tip {
+  margin-top: 8px;
+  padding: 16px;
+  background: #fff;
+  border: 1px solid #dfe2dd;
+}
+
+.info-tip h2 {
+  margin-top: 0;
+  color: #1d574b;
+}
+
+.info-tip-copy {
+  color: #6d7571;
+  font-size: 13px;
+}
+
+.info-qr-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  justify-content: center;
+  margin-top: 14px;
+}
+
+.info-qr {
+  margin: 0;
+  width: min(200px, 42vw);
+}
+
+.info-qr img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid #e4e8e4;
+  background: #fff;
+  object-fit: contain;
+}
+
+.app-footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 8px 14px;
+  padding: 14px 16px 22px;
+  color: #7a827e;
+  font-size: 12px;
+  border-top: 1px solid #e4e8e4;
+  background: #f3f4f1;
+}
+
+.app-footer button {
+  border: 0;
+  background: transparent;
+  color: #1d574b;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  padding: 4px;
+}
+
+.app-footer-sep {
+  color: #c5cbc6;
+}
