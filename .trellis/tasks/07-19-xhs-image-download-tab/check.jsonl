@@ -1,0 +1,10 @@
+{"file": ".trellis/spec/frontend/index.md", "reason": "Frontend checklist for review"}
+{"file": ".trellis/spec/frontend/directory-structure.md", "reason": "Verify new files land in agreed layout"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "UI component conventions"}
+{"file": ".trellis/spec/frontend/state-management.md", "reason": "Tab isolation vs bead regenerate pattern"}
+{"file": ".trellis/spec/frontend/type-safety.md", "reason": "API DTO typing"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "Quality bar and forbidden patterns"}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "Cross-layer API consistency review"}
+{"file": ".trellis/tasks/07-19-xhs-image-download-tab/prd.md", "reason": "Acceptance criteria AC1–AC7"}
+{"file": ".trellis/tasks/07-19-xhs-image-download-tab/design.md", "reason": "Security allowlists, proxy behavior, contracts"}
+{"file": "scripts/xhs_image_demo.py", "reason": "Parity check for HD URL preference order"}

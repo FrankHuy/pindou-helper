@@ -1,0 +1,12 @@
+{"file": ".trellis/spec/frontend/index.md", "reason": "Frontend package overview and pre-dev checklist"}
+{"file": ".trellis/spec/frontend/directory-structure.md", "reason": "Where to place new feature modules vs lib/"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "Component/props conventions for new XHS tab UI"}
+{"file": ".trellis/spec/frontend/hook-guidelines.md", "reason": "Any custom hook patterns if XHS state is extracted"}
+{"file": ".trellis/spec/frontend/state-management.md", "reason": "Keep bead regenerate orchestration isolated from new tab state"}
+{"file": ".trellis/spec/frontend/type-safety.md", "reason": "TypeScript contracts style for API DTOs"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "Lint/quality and forbidden patterns"}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "Browser ↔ Worker API boundary and payload contracts"}
+{"file": ".trellis/spec/guides/code-reuse-thinking-guide.md", "reason": "Avoid duplicating download/proxy helpers"}
+{"file": "scripts/xhs_image_demo.py", "reason": "Source algorithm to port: INITIAL_STATE parse, note find, highest image URL"}
+{"file": ".trellis/tasks/07-19-xhs-image-download-tab/design.md", "reason": "Architecture, API contracts, allowlists, UI states"}
+{"file": ".trellis/tasks/07-19-xhs-image-download-tab/prd.md", "reason": "Requirements and acceptance criteria"}
