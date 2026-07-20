@@ -20,6 +20,10 @@ src/
 ├── main.tsx
 ├── index.css
 ├── features/
+│   ├── info/               # Privacy / About pages (static copy + tip QR)
+│   │   ├── PrivacyPage.tsx
+│   │   ├── AboutPage.tsx
+│   │   └── info.css
 │   └── xhs/                # Independent “小红书下图” tab (no bead imports)
 │       ├── XhsDownloadTab.tsx
 │       ├── xhsApi.ts       # parse/save client helpers
@@ -43,7 +47,10 @@ worker/
     ├── proxy.ts
     ├── allowlist.ts
     ├── redirect.ts
+    ├── turnstile.ts        # Optional siteverify for parse anti-abuse
     └── types.ts
+
+public/tip/                 # About tip QR images (qr-a.jpg, qr-b.jpg)
 ```
 
 Source chart data used to *generate* palette constants lives in repo root `requirements/` (not imported at runtime).

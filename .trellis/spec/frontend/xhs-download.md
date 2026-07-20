@@ -57,7 +57,7 @@ Public pages often only expose ~1080 `WB_DFT` webpic derivatives; `fileId` recov
 
 ```ts
 extractFirstUrl(text: string): string | null
-parseXhsNote(input: string, signal?: AbortSignal): Promise<XhsParseResult>
+parseXhsNote(input: string, signal?: AbortSignal, turnstileToken?: string): Promise<XhsParseResult>
 saveImage(proxyPath: string, index: number): Promise<void>
 ```
 
@@ -70,8 +70,17 @@ saveImage(proxyPath: string, index: number): Promise<void>
 Request:
 
 ```json
-{ "url": "string — share URL or free-form share text" }
+{
+  "url": "string — share URL or free-form share text",
+  "turnstileToken": "optional string — required when Worker has TURNSTILE_SECRET"
+}
 ```
+
+Turnstile (anti-abuse, **parse only**):
+
+- Frontend widget when `VITE_TURNSTILE_SITE_KEY` is set; token sent as `turnstileToken`.
+- Worker calls Cloudflare `siteverify` when `TURNSTILE_SECRET` is set; if secret unset, verification is skipped (local/dev).
+- `/api/xhs/image` is **not** Turnstile-protected.
 
 Success `200`:
 
@@ -111,7 +120,8 @@ Every redirect hop is validated (`fetchWithAllowedRedirects`, `redirect: 'manual
 
 ### Environment
 
-- No secrets / cookies for XHS.
+- No XHS login cookies.
+- Optional Turnstile: `VITE_TURNSTILE_SITE_KEY` (public, Vite), `TURNSTILE_SECRET` (Worker secret via Wrangler).
 - Browser UA similar to demo Chrome UA; image fetch sets `Referer: https://www.xiaohongshu.com/`.
 
 ---
@@ -131,6 +141,7 @@ JSON error shape: `{ "error": XhsErrorCode, "message": "中文说明" }`.
 | Images all unusable | 422 | `not_image_note` | 没有可下载图片 |
 | Proxy missing `u` / bad host | 400 | `invalid_url` | 参数 / 域名 |
 | Proxy non-image body | 502 | `upstream_failed` | 返回不是图片 |
+| Turnstile missing/failed (secret configured) | 403 | `turnstile_failed` | 请完成人机验证 / 验证失败 |
 | Unknown `/api/*` | 404 | `not_found` | 接口不存在 |
 
 Frontend maps `!response.ok` → `Error(message)` and validates success payload shape before rendering.
