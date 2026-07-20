@@ -204,8 +204,10 @@ await fetchWithAllowedRedirects(url, init, isAllowedShareTarget)
 
 ## UI conventions
 
-- Top-level tabs: `bead` | `xhs` in `App.tsx`; upload control only on bead.
+- Top-level tabs: `bead` | `workshop` | `xhs` in `App.tsx`; **header upload only on bead** (XHS uses paste + parse).
+- XHS may **unmount** when leaving the tab (unlike bead/workshop keep-alive).
 - XHS states: idle → loading (disable submit) → success grid / error+retry.
+- Turnstile: site key from `GET /api/config` (preferred) or `VITE_TURNSTILE_SITE_KEY`; reset widget after each parse attempt; Chinese errors on missing/failed token.
 - Lightbox: explicit **保存图片** + copy「也可长按图片，用系统菜单保存」; prev/next + keyboard arrows.
 - Abort in-flight parse on remount / superseding request (generation token + `AbortController`).
 
