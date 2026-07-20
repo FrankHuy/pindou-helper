@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ChangeEvent, MouseEvent as ReactMouseEvent } from 'react'
 import './App.css'
+import XhsDownloadTab from './features/xhs/XhsDownloadTab'
 import {
   ALL_SERIES,
   EXTENDED_SERIES,
@@ -21,6 +22,8 @@ import type { ImageAdjustments } from './lib/presets'
 
 const UploadIcon = () => <span aria-hidden="true">+</span>
 const DownloadIcon = () => <span aria-hidden="true">↓</span>
+
+type AppTab = 'bead' | 'xhs'
 
 type ProcessMode = 'photo' | 'illustration'
 
@@ -100,6 +103,7 @@ function sampleImageRgb(
 }
 
 function App() {
+  const [tab, setTab] = useState<AppTab>('bead')
   const [file, setFile] = useState<File | null>(null)
   const [imageUrl, setImageUrl] = useState('')
   const [targetWidth, setTargetWidth] = useState(48)
@@ -463,17 +467,39 @@ function App() {
           <i />
           <i />
         </div>
-        <div>
+        <div className="brand-copy">
           <h1>拼豆图纸助手</h1>
-          <p>图片仅在当前设备处理</p>
+          <p>{tab === 'bead' ? '图片仅在当前设备处理' : '公开帖高清图下载'}</p>
         </div>
-        <label className="icon-command upload-command" title="上传图片">
-          <UploadIcon />
-          <input type="file" accept="image/*" onChange={handleFile} />
-        </label>
+        {tab === 'bead' && (
+          <label className="icon-command upload-command" title="上传图片">
+            <UploadIcon />
+            <input type="file" accept="image/*" onChange={handleFile} />
+          </label>
+        )}
       </header>
 
-      <section className="workspace">
+      <nav className="app-tabs" aria-label="功能切换">
+        <button
+          type="button"
+          className={`app-tab${tab === 'bead' ? ' active' : ''}`}
+          onClick={() => setTab('bead')}
+          aria-current={tab === 'bead' ? 'page' : undefined}
+        >
+          拼豆图纸
+        </button>
+        <button
+          type="button"
+          className={`app-tab${tab === 'xhs' ? ' active' : ''}`}
+          onClick={() => setTab('xhs')}
+          aria-current={tab === 'xhs' ? 'page' : undefined}
+        >
+          小红书下图
+        </button>
+      </nav>
+
+      {/* Keep bead workspace mounted so generation state survives tab switches. */}
+      <section className={`workspace${tab === 'bead' ? '' : ' is-hidden'}`} aria-hidden={tab !== 'bead'}>
         <aside className="controls">
           <div className="control-group">
             <span className="control-label">处理模式</span>
@@ -839,6 +865,8 @@ function App() {
           )}
         </aside>
       </section>
+
+      {tab === 'xhs' && <XhsDownloadTab />}
     </main>
   )
 }
