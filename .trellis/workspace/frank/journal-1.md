@@ -247,3 +247,37 @@ Added /privacy (bead-only policy) and /about (email + unlabeled tip QRs), footer
 ### Next Steps
 
 - None - task complete
+
+
+## Session 8: XHS HD image download: bare original + optional JPG
+
+**Date**: 2026-07-21
+**Task**: XHS HD image download: bare original + optional JPG
+**Branch**: `main`
+
+### Summary
+
+Aligned XHS image download with finalized HD script: default bare sns-img-bd originals from fileId/token, optional CDN imageView2 JPG via dual proxy paths and a global FE toggle, magic-byte proxy sniff for HEIC/octet-stream, offline demo + xhs-download spec updated.
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `c149745` | (see git log) |
+| `543bea1` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
