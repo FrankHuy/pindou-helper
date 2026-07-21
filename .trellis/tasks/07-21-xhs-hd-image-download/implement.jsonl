@@ -1,0 +1,4 @@
+{"file": ".trellis/spec/frontend/xhs-download.md", "reason": "Current XHS download contracts; must be updated for bare original + optional JPG dual proxy paths"}
+{"file": ".trellis/tasks/07-21-xhs-hd-image-download/prd.md", "reason": "Frozen requirements and product decisions for this task"}
+{"file": ".trellis/tasks/07-21-xhs-hd-image-download/design.md", "reason": "URL strategy, API shape, proxy sniffing, FE toggle design"}
+{"file": ".trellis/tasks/07-21-xhs-hd-image-download/implement.md", "reason": "Ordered implementation checklist and validation gates"}

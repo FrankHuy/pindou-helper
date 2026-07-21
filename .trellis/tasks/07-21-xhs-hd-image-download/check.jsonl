@@ -1,0 +1,4 @@
+{"file": ".trellis/spec/frontend/xhs-download.md", "reason": "Authoritative cross-layer contracts for parse/proxy/UI after the upgrade"}
+{"file": ".trellis/tasks/07-21-xhs-hd-image-download/prd.md", "reason": "Acceptance criteria for quality check"}
+{"file": ".trellis/tasks/07-21-xhs-hd-image-download/design.md", "reason": "Design contracts to verify against implementation"}
+{"file": ".trellis/tasks/07-21-xhs-hd-image-download/implement.md", "reason": "Checklist and review gates for completion"}
