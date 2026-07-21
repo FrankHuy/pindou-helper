@@ -1,0 +1,2 @@
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "Verify no privacy/dep regressions and shared pattern invariants"}
+{"file": ".trellis/spec/frontend/workshop.md", "reason": "Confirm workshop grid path still uses drawPattern without forks"}
