@@ -50,6 +50,7 @@ Prefer pure-frontend algorithms; **no new runtime deps** unless task-approved.
 4. Unique colors used in a pattern is **≤ maxColors** when limited (may be strictly less after nearest-palette collapse)
 5. `counts` / export legend exclude empty cells; total beads = filled cells only
 6. Preview `highlightCode` must not affect `exportPattern` pixels; export always includes usage legend; highlight skips null cells
+7. Pattern grid drawing lives only in `paintPattern` (`src/lib/pattern.ts`): when `showGrid && cellSize >= 7`, draw normal cell strokes then major helper lines every **5** rows and columns (darker/thicker same color family); helpers follow `showGrid` (off → neither); never fork major-line drawing in App/workshop callers
 
 ---
 

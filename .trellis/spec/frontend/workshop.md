@@ -19,8 +19,8 @@
 3. Legend region → swatch sample → nearest **full MARD** codes (dedupe)
 4. If no swatches → mine unique colors from pattern region + Chinese hint
 5. Pattern region mapped with restricted palette + empty rule A
-6. Prefer **grid** reconstruction → `BeadPattern` + `drawPattern`
-7. Else **pixel** labels + dim highlight on pattern crop
+6. Prefer **grid** reconstruction → `BeadPattern` + `drawPattern` (inherits every-5 major helper lines from `paintPattern` when `showGrid`)
+7. Else **pixel** labels + dim highlight on pattern crop (**no** major helper lines; pixel mode has no stable bead grid)
 
 ---
 

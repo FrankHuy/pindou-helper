@@ -422,6 +422,25 @@ function paintPattern(
         context.strokeRect(x, y, cellSize, cellSize)
       }
     }
+
+    // Major helper lines every 5 cells (same color family, darker + thicker)
+    const helperInterval = 5
+    context.strokeStyle = 'rgba(31, 35, 34, 0.45)'
+    context.lineWidth = 1
+    for (let col = 0; col <= pattern.width; col += helperInterval) {
+      const x = col * cellSize + 0.5
+      context.beginPath()
+      context.moveTo(x, originY)
+      context.lineTo(x, originY + logicalHeight)
+      context.stroke()
+    }
+    for (let row = 0; row <= pattern.height; row += helperInterval) {
+      const y = originY + row * cellSize + 0.5
+      context.beginPath()
+      context.moveTo(0, y)
+      context.lineTo(logicalWidth, y)
+      context.stroke()
+    }
   }
 
   if (showCodes && cellSize >= 18) {
