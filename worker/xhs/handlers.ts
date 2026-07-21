@@ -2,8 +2,9 @@ import { isAllowedShareTarget, normalizeImageUrl, parseShareUrl } from './allowl
 import {
   findNote,
   highestImageUrl,
-  isValidFileId,
+  jpgUrlFromFileId,
   resolveImageSourceUrl,
+  resolveToken,
   stateFromPage,
 } from './parse'
 import { fetchWithAllowedRedirects } from './redirect'
@@ -31,6 +32,11 @@ export function extractFirstUrl(text: string): string | null {
 
 function buildProxyPath(imageUrl: string): string {
   return `/api/xhs/image?u=${encodeURIComponent(imageUrl)}`
+}
+
+function normalizeHttpsCandidate(raw: string): URL | null {
+  const sourceUrl = raw.replace(/^http:\/\//i, 'https://')
+  return normalizeImageUrl(sourceUrl)
 }
 
 /** POST /api/xhs/parse — fetch share page, parse INITIAL_STATE, return proxy paths. */
@@ -151,16 +157,18 @@ export async function parseNote(request: Request, env: ParseEnv = {}): Promise<R
   const images: XhsImageItem[] = []
   for (let i = 0; i < note.imageList.length; i++) {
     const image = note.imageList[i]
-    // Prefer fileId original CDN (resolveImageSourceUrl); if that URL fails
-    // allowlist normalize, try infoList fallback. Skip only when both fail.
+    const token = resolveToken(image)
+
+    // Prefer bare original from token; if that URL fails allowlist normalize,
+    // try public-page derivative. Skip only when both fail.
     const candidates: string[] = []
     try {
       candidates.push(resolveImageSourceUrl(image))
     } catch {
-      // no usable source from fileId or infoList
+      // no usable source from token or infoList
     }
-    // When fileId won, still queue public-page URL so normalize failure can recover.
-    if (isValidFileId(image.fileId)) {
+    // When token won, still queue public-page URL so normalize failure can recover.
+    if (token) {
       try {
         candidates.push(highestImageUrl(image))
       } catch {
@@ -170,18 +178,31 @@ export async function parseNote(request: Request, env: ParseEnv = {}): Promise<R
 
     let normalized: URL | null = null
     for (const raw of candidates) {
-      const sourceUrl = raw.replace(/^http:\/\//i, 'https://')
-      normalized = normalizeImageUrl(sourceUrl)
+      normalized = normalizeHttpsCandidate(raw)
       if (normalized) break
     }
     if (!normalized) continue
 
-    images.push({
+    const item: XhsImageItem = {
       index: i + 1,
       width: typeof image.width === 'number' ? image.width : 0,
       height: typeof image.height === 'number' ? image.height : 0,
       proxyPath: buildProxyPath(normalized.toString()),
-    })
+    }
+
+    // Optional CDN JPG of the same token (not WB_DFT webpic).
+    if (token) {
+      try {
+        const jpgNormalized = normalizeHttpsCandidate(jpgUrlFromFileId(token))
+        if (jpgNormalized) {
+          item.proxyPathJpg = buildProxyPath(jpgNormalized.toString())
+        }
+      } catch {
+        // omit proxyPathJpg on builder failure
+      }
+    }
+
+    images.push(item)
   }
 
   if (images.length === 0) {

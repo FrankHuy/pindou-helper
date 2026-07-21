@@ -43,7 +43,14 @@ export function isAllowedImageTarget(url: URL): boolean {
 /** Force https and reject non-allowlisted image hosts. */
 export function normalizeImageUrl(raw: string): URL | null {
   try {
-    const forced = raw.replace(/^http:\/\//i, 'https://')
+    let forced = raw.trim()
+    if (!forced) return null
+    // Page state sometimes emits protocol-relative CDN URLs.
+    if (forced.startsWith('//')) {
+      forced = `https:${forced}`
+    } else {
+      forced = forced.replace(/^http:\/\//i, 'https://')
+    }
     const url = new URL(forced)
     if (url.protocol !== 'https:') return null
     if (!isAllowedImageHost(url.hostname)) return null

@@ -25,8 +25,9 @@
 ### 小红书下图
 
 - 粘贴公开图文分享链接（`xiaohongshu.com` / `xhslink.com`）
-- 解析帖内高清图并网格预览；有 `fileId` 时优先原图像素，无 `fileId` 或构造失败则回退公开页展示档
-- 点击放大后逐张保存（同源 Worker 代理，带 Referer）
+- 解析帖内高清图并网格预览；有 `fileId`/可抽 token 时默认裸 `sns-img-bd` 原图，失败则回退公开页展示档
+- 可选「兼容 JPG」开关：同 token 的 CDN `imageView2` JPG（非 WB_DFT），便于预览/部分设备保存
+- 点击放大后逐张保存（同源 Worker 代理，带 Referer；HEIC 等会纠正 Content-Type）
 - 不支持私密帖、登录态或 ZIP 打包
 
 ## 本地开发

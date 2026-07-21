@@ -17,7 +17,10 @@ export type XhsImageItem = {
   index: number
   width: number
   height: number
+  /** Same-origin proxy for bare original (or page fallback URL). */
   proxyPath: string
+  /** Optional same-origin proxy for CDN JPG of the same token. */
+  proxyPathJpg?: string
 }
 
 export type XhsParseSuccess = {

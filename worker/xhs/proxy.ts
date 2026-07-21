@@ -7,6 +7,70 @@ function jsonError(status: number, error: XhsErrorBody['error'], message: string
   return Response.json(body, { status })
 }
 
+/**
+ * Detect image format from magic bytes when upstream Content-Type is wrong
+ * (common for bare sns-img originals: application/octet-stream + HEIC).
+ */
+export function sniffImageContentType(data: ArrayBuffer | Uint8Array): string | null {
+  const bytes = data instanceof Uint8Array ? data : new Uint8Array(data)
+  if (bytes.length < 12) return null
+
+  // JPEG
+  if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
+    return 'image/jpeg'
+  }
+  // PNG
+  if (
+    bytes[0] === 0x89 &&
+    bytes[1] === 0x50 &&
+    bytes[2] === 0x4e &&
+    bytes[3] === 0x47 &&
+    bytes[4] === 0x0d &&
+    bytes[5] === 0x0a &&
+    bytes[6] === 0x1a &&
+    bytes[7] === 0x0a
+  ) {
+    return 'image/png'
+  }
+  // GIF
+  if (
+    bytes[0] === 0x47 &&
+    bytes[1] === 0x49 &&
+    bytes[2] === 0x46 &&
+    bytes[3] === 0x38 &&
+    (bytes[4] === 0x37 || bytes[4] === 0x39) &&
+    bytes[5] === 0x61
+  ) {
+    return 'image/gif'
+  }
+  // WEBP: RIFF....WEBP
+  if (
+    bytes[0] === 0x52 &&
+    bytes[1] === 0x49 &&
+    bytes[2] === 0x46 &&
+    bytes[3] === 0x46 &&
+    bytes[8] === 0x57 &&
+    bytes[9] === 0x45 &&
+    bytes[10] === 0x42 &&
+    bytes[11] === 0x50
+  ) {
+    return 'image/webp'
+  }
+  // ISO-BMFF brands: ftyp + brand at offset 4..12
+  // AVIF / HEIC / HEIF containers.
+  if (bytes[4] === 0x66 && bytes[5] === 0x74 && bytes[6] === 0x79 && bytes[7] === 0x70) {
+    const brand = String.fromCharCode(bytes[8], bytes[9], bytes[10], bytes[11]).toLowerCase()
+    if (brand === 'avif' || brand === 'avis') return 'image/avif'
+    if (brand === 'heic' || brand === 'heix' || brand === 'hevc' || brand === 'hevx') {
+      return 'image/heic'
+    }
+    if (brand === 'heif' || brand === 'mif1' || brand === 'msf1') {
+      return 'image/heif'
+    }
+  }
+  return null
+}
+
 /** GET /api/xhs/image?u=<encoded-cdn-url> — same-origin proxy with Referer. */
 export async function proxyImage(request: Request): Promise<Response> {
   const url = new URL(request.url)
@@ -44,19 +108,34 @@ export async function proxyImage(request: Request): Promise<Response> {
       )
     }
 
-    const contentType = upstream.headers.get('content-type') ?? 'application/octet-stream'
-    if (!contentType.toLowerCase().startsWith('image/')) {
+    const declared = (upstream.headers.get('content-type') ?? '').split(';', 1)[0].trim()
+    const declaredLower = declared.toLowerCase()
+
+    // Fast path: declared image/* — stream without buffering.
+    if (declaredLower.startsWith('image/')) {
+      const headers = new Headers({
+        'Content-Type': declared || 'application/octet-stream',
+        'Cache-Control': 'public, max-age=300',
+      })
+      const length = upstream.headers.get('content-length')
+      if (length) headers.set('Content-Length', length)
+      return new Response(upstream.body, { status: 200, headers })
+    }
+
+    // Bare originals often return application/octet-stream (or empty type).
+    // Buffer the body and accept only when magic bytes match a known image.
+    const buffer = await upstream.arrayBuffer()
+    const sniffed = sniffImageContentType(buffer)
+    if (!sniffed) {
       return jsonError(502, 'upstream_failed', '图片地址返回的不是图片内容')
     }
 
     const headers = new Headers({
-      'Content-Type': contentType,
+      'Content-Type': sniffed,
       'Cache-Control': 'public, max-age=300',
+      'Content-Length': String(buffer.byteLength),
     })
-    const length = upstream.headers.get('content-length')
-    if (length) headers.set('Content-Length', length)
-
-    return new Response(upstream.body, { status: 200, headers })
+    return new Response(buffer, { status: 200, headers })
   } catch (reason) {
     const message =
       reason instanceof Error && reason.message.startsWith('REDIRECT_')

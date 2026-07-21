@@ -4,7 +4,10 @@ export type XhsImageItem = {
   index: number
   width: number
   height: number
+  /** Same-origin proxy for bare original (or page fallback URL). */
   proxyPath: string
+  /** Optional same-origin proxy for CDN JPG of the same token. */
+  proxyPathJpg?: string
 }
 
 export type XhsParseResult = {
@@ -51,6 +54,10 @@ export function extractFirstUrl(text: string): string | null {
   return withoutCjk.replace(/[),.;!?，。；！？]+$/u, '')
 }
 
+function isProxyPath(value: unknown): value is string {
+  return typeof value === 'string' && value.startsWith('/api/xhs/image')
+}
+
 function isXhsParseResult(data: unknown): data is XhsParseResult {
   if (!data || typeof data !== 'object') return false
   const record = data as Record<string, unknown>
@@ -59,12 +66,19 @@ function isXhsParseResult(data: unknown): data is XhsParseResult {
   return record.images.every((item) => {
     if (!item || typeof item !== 'object') return false
     const image = item as Record<string, unknown>
-    return (
-      typeof image.index === 'number' &&
-      typeof image.proxyPath === 'string' &&
-      image.proxyPath.startsWith('/api/xhs/image')
-    )
+    if (typeof image.index !== 'number' || !isProxyPath(image.proxyPath)) return false
+    // Optional dual path: if present must also be same-origin proxy.
+    if (image.proxyPathJpg !== undefined && !isProxyPath(image.proxyPathJpg)) return false
+    return true
   })
+}
+
+/**
+ * Active display/save path: prefer CDN JPG when toggle is on and path exists.
+ */
+export function activeImagePath(image: XhsImageItem, preferJpg: boolean): string {
+  if (preferJpg && image.proxyPathJpg) return image.proxyPathJpg
+  return image.proxyPath
 }
 
 export async function parseXhsNote(
@@ -109,6 +123,9 @@ function extensionFromContentType(contentType: string | null): string {
     'image/png': 'png',
     'image/webp': 'webp',
     'image/gif': 'gif',
+    'image/avif': 'avif',
+    'image/heic': 'heic',
+    'image/heif': 'heic',
   }
   return known[kind] ?? 'jpg'
 }

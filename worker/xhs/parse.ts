@@ -1,11 +1,16 @@
 /**
  * Port of scripts/xhs_image_demo.py pure helpers:
- * state_from_page / find_note / highest_image_url
+ * state_from_page / find_note / highest_image_url / token extract + CDN builders
  */
 
 import type { NoteImage, NoteRecord } from './types'
 
 const INITIAL_STATE_RE = /window\.__INITIAL_STATE__\s*=\s*(\{[\s\S]*?\})\s*<\/script>/
+
+/** Default original-quality CDN host (matches XHS-Downloader / finalized HD script). */
+export const ORIGINAL_CDN_HOST = 'sns-img-bd.xhscdn.com'
+
+const FILE_ID_RE = /^[A-Za-z0-9_-]+$/
 
 /** Decode HTML entities used in the embedded state payload. */
 function htmlUnescape(value: string): string {
@@ -65,7 +70,7 @@ export function findNote(state: unknown): NoteRecord {
 /** Prefer WB_DFT / original-style URL over preview derivatives. */
 export function highestImageUrl(image: NoteImage): string {
   const info = image.infoList ?? []
-  for (const preferred of ['WB_DFT', 'WB_ORI', 'WB_PRV'] as const) {
+  for (const preferred of ['WB_DFT', 'WB_ORI', 'WB_HQ', 'WB_PRV'] as const) {
     for (const item of info) {
       if (item.imageScene === preferred && item.url) {
         return item.url
@@ -79,8 +84,6 @@ export function highestImageUrl(image: NoteImage): string {
   throw new Error('IMAGE_URL_MISSING')
 }
 
-const FILE_ID_RE = /^[A-Za-z0-9_-]+$/
-
 /** Reject empty / path-injection fileId values before constructing CDN URLs. */
 export function isValidFileId(fileId: unknown): fileId is string {
   if (typeof fileId !== 'string') return false
@@ -92,13 +95,107 @@ export function isValidFileId(fileId: unknown): fileId is string {
 }
 
 /**
- * Build competitor-style original image URL from fileId.
- * Force format/jpg so bare HEIC containers are not returned.
+ * Extract opaque CDN token (fileId) from a page-provided image URL.
+ * - Strips `!nd_…` transformation suffixes
+ * - webpic hosts: path is `/{ts}/{hash}/{fileId}!suffix` → skip first two segments
+ * - other hosts: path after host is the token (usually equals bare fileId)
+ */
+export function extractFileIdFromUrl(rawUrl: string): string | null {
+  if (!rawUrl || typeof rawUrl !== 'string') return null
+  let normalized = rawUrl.trim()
+  if (!normalized) return null
+  if (normalized.startsWith('//')) {
+    normalized = `https:${normalized}`
+  } else if (normalized.startsWith('http://')) {
+    normalized = `https://${normalized.slice('http://'.length)}`
+  }
+
+  let parsed: URL
+  try {
+    parsed = new URL(normalized)
+  } catch {
+    return null
+  }
+
+  // Path without leading slash; drop empty segments from trailing slash.
+  const segments = parsed.pathname.split('/').filter(Boolean)
+  if (segments.length === 0) return null
+
+  let tokenPath: string
+  if (parsed.hostname.toLowerCase().includes('webpic')) {
+    // /{timestamp}/{hash}/{fileId}[!suffix]
+    if (segments.length < 3) return null
+    tokenPath = segments.slice(2).join('/')
+  } else {
+    tokenPath = segments.join('/')
+  }
+
+  // CDN transform suffix is after `!` on the last path segment (or whole path).
+  const token = tokenPath.split('!')[0]?.trim() ?? ''
+  if (!isValidFileId(token)) return null
+  return token
+}
+
+/** Ordered candidate URLs for token extraction (scene preference + top-level). */
+function candidateUrlsForToken(image: NoteImage): string[] {
+  const urls: string[] = []
+  const seen = new Set<string>()
+  const push = (value: unknown) => {
+    if (typeof value !== 'string') return
+    const trimmed = value.trim()
+    if (!trimmed || seen.has(trimmed)) return
+    seen.add(trimmed)
+    urls.push(trimmed)
+  }
+
+  const info = image.infoList ?? []
+  for (const preferred of ['WB_DFT', 'WB_ORI', 'WB_HQ', 'WB_PRV'] as const) {
+    for (const item of info) {
+      if (item.imageScene === preferred) push(item.url)
+    }
+  }
+  for (const item of info) {
+    push(item.url)
+  }
+  for (const key of ['urlDefault', 'url', 'urlPre'] as const) {
+    push(image[key])
+  }
+  return urls
+}
+
+/**
+ * Resolve bare fileId / CDN token for an image.
+ * Prefer page `fileId`, else extract from infoList / top-level URLs.
+ */
+export function resolveToken(image: NoteImage): string | null {
+  if (isValidFileId(image.fileId)) {
+    return image.fileId.trim()
+  }
+  for (const url of candidateUrlsForToken(image)) {
+    const token = extractFileIdFromUrl(url)
+    if (token) return token
+  }
+  return null
+}
+
+/**
+ * Build bare original CDN URL from fileId/token (no imageView2, no !suffix).
+ * Bare originals may be HEIC / octet-stream — use jpgUrlFromFileId for JPG.
  */
 export function originalUrlFromFileId(
   fileId: string,
-  host = 'sns-img-hw.xhscdn.com',
+  host = ORIGINAL_CDN_HOST,
 ): string {
+  if (!isValidFileId(fileId)) {
+    throw new Error('INVALID_FILE_ID')
+  }
+  return `https://${host}/${encodeURIComponent(fileId.trim())}`
+}
+
+/**
+ * CDN-transcoded JPG of the same token (higher-res than WB_DFT webpic).
+ */
+export function jpgUrlFromFileId(fileId: string, host = ORIGINAL_CDN_HOST): string {
   if (!isValidFileId(fileId)) {
     throw new Error('INVALID_FILE_ID')
   }
@@ -106,11 +203,12 @@ export function originalUrlFromFileId(
 }
 
 /**
- * Prefer original sns-img CDN from fileId; fall back to public-page infoList URLs.
+ * Prefer bare sns-img-bd original from token; fall back to public-page infoList URLs.
  */
 export function resolveImageSourceUrl(image: NoteImage): string {
-  if (isValidFileId(image.fileId)) {
-    return originalUrlFromFileId(image.fileId)
+  const token = resolveToken(image)
+  if (token) {
+    return originalUrlFromFileId(token)
   }
   return highestImageUrl(image)
 }

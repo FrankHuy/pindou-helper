@@ -1,7 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { FormEvent, KeyboardEvent } from 'react'
 import type { XhsParseResult } from './xhsApi'
-import { extractFirstUrl, fetchPublicConfig, parseXhsNote, saveImage } from './xhsApi'
+import {
+  activeImagePath,
+  extractFirstUrl,
+  fetchPublicConfig,
+  parseXhsNote,
+  saveImage,
+} from './xhsApi'
 import './xhs.css'
 
 type Phase = 'idle' | 'loading' | 'success' | 'error'
@@ -68,6 +74,8 @@ export default function XhsDownloadTab() {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
   const [saving, setSaving] = useState(false)
   const [saveHint, setSaveHint] = useState('')
+  /** Prefer CDN JPG (proxyPathJpg) for preview/save; default off = bare original. */
+  const [preferJpg, setPreferJpg] = useState(false)
   const [turnstileToken, setTurnstileToken] = useState('')
   const [turnstileSiteKey, setTurnstileSiteKey] = useState(BUILD_TURNSTILE_SITE_KEY)
   const [turnstileServerRequired, setTurnstileServerRequired] = useState(false)
@@ -82,6 +90,7 @@ export default function XhsDownloadTab() {
   const images = result?.images ?? []
   const activeImage =
     lightboxIndex != null && images[lightboxIndex] ? images[lightboxIndex] : null
+  const activePath = activeImage ? activeImagePath(activeImage, preferJpg) : null
   // Show widget whenever we have a site key (runtime or build-time).
   const turnstileRequired = Boolean(turnstileSiteKey)
   // If Worker enforces secret but site key is missing, surface a setup error.
@@ -286,7 +295,7 @@ export default function XhsDownloadTab() {
     setSaving(true)
     setSaveHint('')
     try {
-      await saveImage(activeImage.proxyPath, activeImage.index)
+      await saveImage(activeImagePath(activeImage, preferJpg), activeImage.index)
       setSaveHint('已触发保存；若未弹出，可长按图片用系统菜单保存')
     } catch (reason) {
       setSaveHint(reason instanceof Error ? reason.message : '保存失败')
@@ -427,23 +436,36 @@ export default function XhsDownloadTab() {
         {phase === 'success' && result && (
           <div className="xhs-result">
             <div className="xhs-result-head">
-              <h3>{result.title}</h3>
-              <span>共 {result.images.length} 张 · 点击缩略图放大后保存</span>
+              <div className="xhs-result-title-block">
+                <h3>{result.title}</h3>
+                <span>共 {result.images.length} 张 · 点击缩略图放大后保存</span>
+              </div>
+              <label className="xhs-jpg-toggle">
+                <input
+                  type="checkbox"
+                  checked={preferJpg}
+                  onChange={(event) => setPreferJpg(event.target.checked)}
+                />
+                <span>兼容 JPG（便于预览/部分设备保存）</span>
+              </label>
             </div>
             <div className="xhs-grid" role="list">
-              {result.images.map((image, index) => (
-                <button
-                  key={`${image.index}-${image.proxyPath}`}
-                  type="button"
-                  className="xhs-thumb"
-                  role="listitem"
-                  onClick={() => openLightbox(index)}
-                  aria-label={`查看第 ${image.index} 张`}
-                >
-                  <img src={image.proxyPath} alt={`第 ${image.index} 张`} loading="lazy" />
-                  <span className="xhs-thumb-index">{image.index}</span>
-                </button>
-              ))}
+              {result.images.map((image, index) => {
+                const path = activeImagePath(image, preferJpg)
+                return (
+                  <button
+                    key={`${image.index}-${path}`}
+                    type="button"
+                    className="xhs-thumb"
+                    role="listitem"
+                    onClick={() => openLightbox(index)}
+                    aria-label={`查看第 ${image.index} 张`}
+                  >
+                    <img src={path} alt={`第 ${image.index} 张`} loading="lazy" />
+                    <span className="xhs-thumb-index">{image.index}</span>
+                  </button>
+                )
+              })}
             </div>
           </div>
         )}
@@ -478,11 +500,13 @@ export default function XhsDownloadTab() {
                   ‹
                 </button>
               )}
-              <img
-                className="xhs-lightbox-image"
-                src={activeImage.proxyPath}
-                alt={`第 ${activeImage.index} 张高清图`}
-              />
+              {activePath && (
+                <img
+                  className="xhs-lightbox-image"
+                  src={activePath}
+                  alt={`第 ${activeImage.index} 张高清图`}
+                />
+              )}
               {images.length > 1 && (
                 <button
                   type="button"

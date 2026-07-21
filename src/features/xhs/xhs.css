@@ -134,10 +134,17 @@
 .xhs-result-head {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: 8px;
+  gap: 10px 16px;
   margin-bottom: 12px;
+}
+
+.xhs-result-title-block {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  flex: 1 1 220px;
 }
 
 .xhs-result-head h3 {
@@ -151,6 +158,30 @@
 .xhs-result-head span {
   color: #727a76;
   font-size: 12px;
+}
+
+.xhs-jpg-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 6px 10px;
+  border: 1px solid #d7dcd7;
+  background: #fff;
+  color: #3d4541;
+  font-size: 12px;
+  line-height: 1.35;
+  cursor: pointer;
+  user-select: none;
+  flex: 0 1 auto;
+}
+
+.xhs-jpg-toggle input {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  accent-color: #1d574b;
+  cursor: pointer;
 }
 
 .xhs-grid {
