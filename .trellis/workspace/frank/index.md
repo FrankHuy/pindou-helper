@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 8
+- **Total Sessions**: 9
 - **Last Active**: 2026-07-21
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~283 | Active |
+| `journal-1.md` | ~317 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 9 | 2026-07-21 | 图纸每5行辅助分隔线 | `1da9fd6`, `6409018` | `main` |
 | 8 | 2026-07-21 | XHS HD image download: bare original + optional JPG | `c149745`, `543bea1` | `main` |
 | 7 | 2026-07-20 | 拼豆工作间：图纸上传与色号高亮 | `8894b43`, `2453460`, `e731604` | `main` |
 | 6 | 2026-07-20 | Privacy About pages and Turnstile on parse | `7044680`, `33024dc`, `d8e66cc` | `main` |

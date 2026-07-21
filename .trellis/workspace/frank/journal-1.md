@@ -281,3 +281,37 @@ Aligned XHS image download with finalized HD script: default bare sns-img-bd ori
 ### Next Steps
 
 - None - task complete
+
+
+## Session 9: 图纸每5行辅助分隔线
+
+**Date**: 2026-07-21
+**Task**: 图纸每5行辅助分隔线
+**Branch**: `main`
+
+### Summary
+
+在 paintPattern 统一绘制每5行/列更深略粗辅助线，生成预览、工作间格点、导出 PNG 一致；跟随 showGrid；更新 quality/workshop spec。
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `1da9fd6` | (see git log) |
+| `6409018` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
