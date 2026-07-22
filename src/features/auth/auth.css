@@ -154,6 +154,15 @@
 
 .auth-turnstile {
   min-height: 65px;
+  width: 100%;
+  overflow: visible;
+}
+
+.auth-turnstile-host {
+  min-height: 65px;
+  /* Turnstile iframe needs a stable box; avoid zero-size host */
+  width: 100%;
+  max-width: 100%;
 }
 
 /* Header session chip on main app shell */
