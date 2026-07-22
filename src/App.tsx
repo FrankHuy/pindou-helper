@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ChangeEvent, MouseEvent as ReactMouseEvent } from 'react'
 import './App.css'
+import AdminPage from './features/admin/AdminPage'
+import AuthPages from './features/auth/AuthPages'
+import type { AuthPageId } from './features/auth/AuthPages'
+import AuthSessionBar from './features/auth/AuthSessionBar'
+import type { PublicUser } from './features/auth/authApi'
 import AboutPage from './features/info/AboutPage'
 import PrivacyPage from './features/info/PrivacyPage'
 import './features/info/info.css'
@@ -28,11 +33,18 @@ const UploadIcon = () => <span aria-hidden="true">+</span>
 const DownloadIcon = () => <span aria-hidden="true">↓</span>
 
 type AppTab = 'bead' | 'workshop' | 'xhs'
-type ShellPage = 'app' | 'privacy' | 'about'
+type ShellPage = 'app' | 'privacy' | 'about' | 'admin' | AuthPageId
+
+const AUTH_PAGES: AuthPageId[] = ['login', 'register', 'forgot', 'reset', 'verify']
 
 function shellPageFromPath(pathname: string): ShellPage {
-  if (pathname === '/privacy' || pathname.endsWith('/privacy')) return 'privacy'
-  if (pathname === '/about' || pathname.endsWith('/about')) return 'about'
+  const normalized = pathname.replace(/\/+$/, '') || '/'
+  if (normalized === '/privacy' || normalized.endsWith('/privacy')) return 'privacy'
+  if (normalized === '/about' || normalized.endsWith('/about')) return 'about'
+  if (normalized === '/admin' || normalized.endsWith('/admin')) return 'admin'
+  for (const page of AUTH_PAGES) {
+    if (normalized === `/${page}` || normalized.endsWith(`/${page}`)) return page
+  }
   return 'app'
 }
 
@@ -117,6 +129,8 @@ function App() {
   const [shellPage, setShellPage] = useState<ShellPage>(() =>
     typeof window !== 'undefined' ? shellPageFromPath(window.location.pathname) : 'app',
   )
+  const [authRefresh, setAuthRefresh] = useState(0)
+  const [sessionUser, setSessionUser] = useState<PublicUser | null>(null)
   const [tab, setTab] = useState<AppTab>('bead')
   const [file, setFile] = useState<File | null>(null)
   const [imageUrl, setImageUrl] = useState('')
@@ -181,10 +195,20 @@ function App() {
 
   const navigateShell = useCallback((page: ShellPage) => {
     const path = page === 'app' ? '/' : `/${page}`
-    if (window.location.pathname !== path) {
-      window.history.pushState({ shellPage: page }, '', path)
+    // Preserve query string only for token-bearing auth routes when already there;
+    // otherwise navigate to clean path.
+    const nextUrl =
+      page === 'reset' || page === 'verify'
+        ? `${path}${window.location.pathname.endsWith(`/${page}`) ? window.location.search : ''}`
+        : path
+    if (`${window.location.pathname}${window.location.search}` !== nextUrl) {
+      window.history.pushState({ shellPage: page }, '', nextUrl)
     }
     setShellPage(page)
+  }, [])
+
+  const bumpAuth = useCallback(() => {
+    setAuthRefresh((n) => n + 1)
   }, [])
 
   useEffect(() => {
@@ -502,6 +526,33 @@ function App() {
     )
   }
 
+  if (shellPage === 'admin') {
+    return (
+      <main className="app-shell">
+        <AdminPage
+          sessionUser={sessionUser}
+          onBack={() => navigateShell('app')}
+          onNeedLogin={() => navigateShell('login')}
+        />
+      </main>
+    )
+  }
+
+  if (AUTH_PAGES.includes(shellPage as AuthPageId)) {
+    return (
+      <main className="app-shell">
+        <AuthPages
+          page={shellPage as AuthPageId}
+          onNavigate={(page) => {
+            if (page === 'app') navigateShell('app')
+            else navigateShell(page)
+          }}
+          onAuthed={bumpAuth}
+        />
+      </main>
+    )
+  }
+
   return (
     <main className="app-shell">
       <header className="topbar">
@@ -521,6 +572,12 @@ function App() {
                 : '公开帖高清图下载'}
           </p>
         </div>
+        <AuthSessionBar
+          refreshToken={authRefresh}
+          onLogin={() => navigateShell('login')}
+          onAdmin={() => navigateShell('admin')}
+          onUserChange={setSessionUser}
+        />
         {tab === 'bead' && (
           <label className="icon-command upload-command" title="上传图片">
             <UploadIcon />

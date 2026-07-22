@@ -23,7 +23,9 @@ button { color: inherit; }
 .brand-mark i:nth-child(2) { background: #e2b43c; }
 .brand-mark i:nth-child(3) { background: #d76857; }
 .brand-mark i:nth-child(4) { background: #4b8ba8; }
-.icon-command { margin-left: auto; width: 36px; height: 36px; border: 1px solid #d7dcd7; background: #fff; display: grid; place-items: center; cursor: pointer; font-size: 24px; line-height: 1; flex-shrink: 0; }
+.icon-command { width: 36px; height: 36px; border: 1px solid #d7dcd7; background: #fff; display: grid; place-items: center; cursor: pointer; font-size: 24px; line-height: 1; flex-shrink: 0; }
+/* Session chip / login sits at the trailing edge of the brand row. */
+.topbar .auth-session { margin-left: auto; }
 .icon-command input, .empty-state input { display: none; }
 
 .app-tabs {

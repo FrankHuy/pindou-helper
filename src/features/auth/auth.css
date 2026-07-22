@@ -1,0 +1,229 @@
+/* Auth shell pages (login / register / forgot / reset / verify) */
+
+.auth-page {
+  min-height: 100dvh;
+  background: #f3f4f1;
+  color: #202523;
+}
+
+.auth-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 56px;
+  padding: 0 14px;
+  background: #fff;
+  border-bottom: 1px solid #dfe2dd;
+}
+
+.auth-topbar h1 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 750;
+}
+
+.auth-back {
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid #d7dcd7;
+  background: #f6f7f5;
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.auth-card {
+  width: min(420px, calc(100% - 28px));
+  margin: 28px auto 48px;
+  padding: 22px 20px 24px;
+  background: #fff;
+  border: 1px solid #dfe2dd;
+  box-shadow: 0 8px 24px rgba(45, 54, 49, 0.06);
+}
+
+.auth-card h2 {
+  margin: 0 0 6px;
+  font-size: 18px;
+  font-weight: 750;
+}
+
+.auth-lead {
+  margin: 0 0 18px;
+  color: #6d7571;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.auth-form {
+  display: grid;
+  gap: 14px;
+}
+
+.auth-field {
+  display: grid;
+  gap: 6px;
+}
+
+.auth-field label {
+  font-size: 12px;
+  font-weight: 650;
+  color: #6d7571;
+}
+
+.auth-field input {
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid #d7dcd7;
+  background: #fff;
+  font-size: 14px;
+}
+
+.auth-field input:focus {
+  outline: 2px solid rgba(29, 87, 75, 0.25);
+  border-color: #1d574b;
+}
+
+.auth-submit {
+  min-height: 42px;
+  border: 0;
+  background: #1d574b;
+  color: #fff;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.auth-submit:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.auth-error {
+  margin: 0;
+  padding: 10px 12px;
+  background: #fdf2f1;
+  border: 1px solid #f0cfcb;
+  color: #9c3129;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.auth-error-inline {
+  margin: 6px 0 0;
+  color: #9c3129;
+  font-size: 12px;
+}
+
+.auth-success {
+  margin: 0;
+  padding: 10px 12px;
+  background: #eef6f3;
+  border: 1px solid #c9e2d9;
+  color: #1d574b;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.auth-hint {
+  margin: 0;
+  color: #7a827e;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.auth-links {
+  margin-top: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  font-size: 13px;
+}
+
+.auth-links button {
+  border: 0;
+  background: transparent;
+  color: #1d574b;
+  font-weight: 650;
+  cursor: pointer;
+  padding: 0;
+}
+
+.auth-turnstile {
+  min-height: 65px;
+}
+
+/* Header session chip on main app shell */
+.auth-session {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  max-width: min(70vw, 520px);
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.auth-session-email {
+  font-size: 12px;
+  color: #5f6763;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 140px;
+}
+
+.auth-session-link,
+.auth-session-btn {
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid #d7dcd7;
+  background: #fff;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.auth-session-link {
+  background: #1d574b;
+  border-color: #1d574b;
+  color: #fff;
+}
+
+.auth-session-badge {
+  font-size: 10px;
+  color: #9a6b18;
+  white-space: nowrap;
+}
+
+.auth-session-quota {
+  font-size: 11px;
+  font-weight: 700;
+  color: #1d574b;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.auth-session-note {
+  font-size: 11px;
+  color: #6d7571;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+  .auth-session-email {
+    display: none;
+  }
+
+  .auth-session-note {
+    display: none;
+  }
+}
