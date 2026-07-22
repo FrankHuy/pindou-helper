@@ -100,5 +100,12 @@ npx wrangler secret put TURNSTILE_SECRET
 ## 隐私与关于
 
 - 站内页面：`/privacy`（隐私政策）、`/about`（关于 / 联系 / 可选打赏）
-- **拼豆图纸**：图片处理全部发生在浏览器本地：`File input → Canvas → ImageData → 图纸`。不会上传你的本地照片。
+- **拼豆图纸 / 工作间**：图片处理全部发生在浏览器本地：`File input → Canvas → ImageData → 图纸`。不会把本地原图作为默认上传内容。
+- **账号（可选）**：注册/登录后服务端保存邮箱、密码哈希、会话与配额等；验证/重置密码通过邮件链接。后续 AI 等有成本的能力需登录（通常还须验证邮箱）。部署与密钥说明见 [`docs/deploy-auth.md`](docs/deploy-auth.md)。
 - **小红书下图**：会将你粘贴的**分享链接**发送到本站 Cloudflare Worker；Worker 代为请求小红书公开页面与图片 CDN（不携带、不存储你的登录 Cookie）。请仅用于公开且你有权保存的素材。生产环境建议开启 Turnstile 限制解析刷量。
+
+## 账号与 AI 护栏部署
+
+完整清单（D1、Workers 变量、Resend 发件人、超管 `Frank@Frankiehu.top`、验收项）见：
+
+**[`docs/deploy-auth.md`](docs/deploy-auth.md)**
