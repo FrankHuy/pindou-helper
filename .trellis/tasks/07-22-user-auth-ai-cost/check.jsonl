@@ -1,0 +1,5 @@
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "Quality bar for check agent"}
+{"file": ".trellis/spec/frontend/type-safety.md", "reason": "Type safety checks"}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "SPA-Worker contract consistency"}
+{"file": ".trellis/tasks/07-22-user-auth-ai-cost/design.md", "reason": "Verify implementation against design guards"}
+{"file": ".trellis/tasks/07-22-user-auth-ai-cost/prd.md", "reason": "Acceptance criteria mapping"}

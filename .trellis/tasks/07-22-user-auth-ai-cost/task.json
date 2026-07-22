@@ -1,0 +1,30 @@
+{
+  "id": "user-auth-ai-cost",
+  "name": "user-auth-ai-cost",
+  "title": "用户体系与AI成本治理分期",
+  "description": "",
+  "status": "in_progress",
+  "dev_type": null,
+  "scope": null,
+  "package": null,
+  "priority": "P2",
+  "creator": "frank",
+  "assignee": "frank",
+  "createdAt": "2026-07-22",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [
+    "07-22-auth-session",
+    "07-22-quota-guard",
+    "07-22-admin-mini"
+  ],
+  "parent": null,
+  "relatedFiles": [],
+  "notes": "",
+  "meta": {}
+}

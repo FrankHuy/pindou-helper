@@ -1,0 +1,6 @@
+{"file": ".trellis/spec/frontend/index.md", "reason": "Frontend layer entry conventions"}
+{"file": ".trellis/spec/frontend/directory-structure.md", "reason": "Where to place auth/admin feature modules"}
+{"file": ".trellis/spec/frontend/type-safety.md", "reason": "TS contracts for API client types"}
+{"file": ".trellis/spec/frontend/xhs-download.md", "reason": "Existing Turnstile and /api/config patterns to reuse"}
+{"file": ".trellis/tasks/07-22-user-auth-ai-cost/research/cloudflare-free-and-crypto.md", "reason": "CF Free limits and Web Crypto password guidance"}
+{"file": ".trellis/tasks/07-22-user-auth-ai-cost/design.md", "reason": "Phase 1 architecture and API contracts"}
