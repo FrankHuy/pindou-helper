@@ -24,7 +24,7 @@ Default export function components. Chinese user-facing copy. Prefer plain butto
 
 Owns:
 
-- `ShellPage`: `'app' | 'privacy' | 'about'` synced with `/`, `/privacy`, `/about` via `history.pushState` + `popstate` (no react-router)
+- `ShellPage`: `'app' | 'privacy' | 'about' | 'admin' | auth pages` synced with `/`, `/privacy`, `/about`, `/admin`, `/login`… via `history.pushState` + `popstate` (no react-router)
 - `AppTab`: `'bead' | 'workshop' | 'xhs'`
 - Bead generation state and canvas (large local state tree)
 - Footer links → Privacy / About

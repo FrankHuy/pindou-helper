@@ -13,7 +13,7 @@ Vite + React + TypeScript PWA with an optional Cloudflare Worker:
 | Shell + bead UI | `src/App.tsx`, `App.css` | Tabs, generate orchestration, footer, path shell |
 | Domain (pure) | `src/lib/**` | Palette, pattern, workshop analyze, color-match, presets |
 | Features | `src/features/**` | Tab/page UI + co-located CSS / client helpers |
-| Worker | `worker/**` | `/api/*` (config, XHS parse/proxy) |
+| Worker | `worker/**` | `/api/*` (config, auth, XHS parse/proxy) |
 | Static | `public/**` | PWA assets, About tip QR |
 | Chart sources | `requirements/**` | Generate palette constants (not runtime-imported) |
 | Offline XHS demo | `scripts/xhs_image_demo.py` | Reference only |
@@ -36,10 +36,21 @@ src/
 │   ├── workshop/           # 拼豆工作间 tab
 │   │   ├── BeadWorkshopTab.tsx
 │   │   └── workshop.css
-│   └── xhs/                # 小红书下图 tab
-│       ├── XhsDownloadTab.tsx
-│       ├── xhsApi.ts
-│       └── xhs.css
+│   ├── xhs/                # 小红书下图 tab
+│   │   ├── XhsDownloadTab.tsx
+│   │   ├── xhsApi.ts
+│   │   └── xhs.css
+│   ├── auth/               # login/register/reset/verify shell pages
+│   │   ├── AuthPages.tsx
+│   │   ├── AuthSessionBar.tsx
+│   │   ├── TurnstileField.tsx
+│   │   ├── authApi.ts
+│   │   ├── fingerprint.ts
+│   │   └── auth.css
+│   └── admin/              # Phase 1 mini admin shell page (/admin)
+│       ├── AdminPage.tsx
+│       ├── adminApi.ts
+│       └── admin.css
 └── lib/
     ├── color-match.ts      # Shared RGB distance + closestColor*
     ├── palette.ts          # Compat re-export of palette types/colors
@@ -62,7 +73,11 @@ src/
         └── index.ts
 
 worker/
-├── index.ts                # Routes: /api/config, /api/xhs/*, ASSETS SPA
+├── index.ts                # Routes: /api/config, /api/auth/*, /api/me, /api/admin/*, /api/ai/*, /api/xhs/*
+├── auth/                   # credentials, sessions, verify/reset mail
+├── admin/                  # mini admin APIs + authz
+├── guard/                  # AI quota / circuit preflight
+├── db/                     # D1 config + usage_daily helpers
 └── xhs/
     ├── handlers.ts
     ├── parse.ts
@@ -96,6 +111,10 @@ public/
 | Info pages | `src/features/info/*` | Static copy; Privacy bead-only wording |
 | XHS UI + client | `src/features/xhs/*` | Same-origin `/api/*` only |
 | XHS Worker | `worker/xhs/*` | Allowlists, parse, proxy, Turnstile |
+| Auth UI | `src/features/auth/*` | Shell pages + session chip; credentials include |
+| Auth Worker | `worker/auth/*`, `worker/db/*` | D1 users/sessions; no `src/` imports |
+| Admin UI | `src/features/admin/*` | Mini ops page; hide link unless admin/super; API still enforces |
+| Admin Worker | `worker/admin/*` | `/api/admin/*` role matrix; no `src/` imports |
 
 ### Import boundaries
 
