@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 9
-- **Last Active**: 2026-07-21
+- **Total Sessions**: 10
+- **Last Active**: 2026-07-22
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~317 | Active |
+| `journal-1.md` | ~353 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 10 | 2026-07-22 | 用户体系与AI成本治理 Phase 1 | `196c582`, `de4233b`, `e040460`, `150de96` | `main` |
 | 9 | 2026-07-21 | 图纸每5行辅助分隔线 | `1da9fd6`, `6409018` | `main` |
 | 8 | 2026-07-21 | XHS HD image download: bare original + optional JPG | `c149745`, `543bea1` | `main` |
 | 7 | 2026-07-20 | 拼豆工作间：图纸上传与色号高亮 | `8894b43`, `2453460`, `e731604` | `main` |

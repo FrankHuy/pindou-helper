@@ -315,3 +315,39 @@ Aligned XHS image download with finalized HD script: default bare sns-img-bd ori
 ### Next Steps
 
 - None - task complete
+
+
+## Session 10: 用户体系与AI成本治理 Phase 1
+
+**Date**: 2026-07-22
+**Task**: 用户体系与AI成本治理 Phase 1
+**Branch**: `main`
+
+### Summary
+
+Completed Phase 1: Workers+D1 email/password auth, Turnstile+domain allowlist+IP/fp anti-abuse, AI force-login quotas and circuit (/api/ai/ping), same-origin mini /admin. Docs: deploy-auth checklist (Resend/MAIL_FROM/D1/superadmin Frank@Frankiehu.top), privacy copy. Children auth-session/quota-guard/admin-mini archived earlier; parent archived as Phase-1-done. Phase 2 VIP and Phase 3 full admin deferred. Operator still needs remote D1 SQL apply + CF deploy verification.
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `196c582` | (see git log) |
+| `de4233b` | (see git log) |
+| `e040460` | (see git log) |
+| `150de96` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
