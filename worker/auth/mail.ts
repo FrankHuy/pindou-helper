@@ -1,8 +1,9 @@
 /**
  * Transactional email via Resend.
- * When RESEND_API_KEY is unset, log the action URL to console and still succeed
- * (local/dev). Never log passwords or raw tokens beyond the full URL needed for
- * manual testing in dev.
+ *
+ * When RESEND_API_KEY is unset: do NOT claim the email was delivered.
+ * We still log the verify/reset URL for local/dev operators (`mode: 'console'`).
+ * Never log passwords or raw tokens beyond the full URL needed for manual testing.
  */
 
 export type MailEnv = {
@@ -10,7 +11,9 @@ export type MailEnv = {
   MAIL_FROM?: string
 }
 
-export type SendMailResult = { ok: true; mode: 'resend' | 'console' } | { ok: false; message: string }
+export type SendMailResult =
+  | { ok: true; mode: 'resend'; id?: string }
+  | { ok: false; mode: 'console' | 'resend'; message: string }
 
 export async function sendAuthEmail(
   env: MailEnv,
@@ -26,12 +29,19 @@ export async function sendAuthEmail(
 
   if (!apiKey) {
     // Dev fallback: operator can open the link from Worker logs.
-    console.info('[auth-mail:dev]', {
+    // Callers must treat this as "not delivered" (ok: false).
+    console.info('[auth-mail:dev] RESEND_API_KEY missing — email not sent', {
       to: options.to,
       subject: options.subject,
+      from,
       text: options.text,
     })
-    return { ok: true, mode: 'console' }
+    return {
+      ok: false,
+      mode: 'console',
+      message:
+        '服务器未配置 RESEND_API_KEY，验证邮件未发出（请在 Cloudflare Worker 运行时 Secrets 中配置）',
+    }
   }
 
   try {
@@ -49,15 +59,38 @@ export async function sendAuthEmail(
         html: options.html,
       }),
     })
+    const detail = await response.text().catch(() => '')
     if (!response.ok) {
-      const detail = await response.text().catch(() => '')
-      console.error('[auth-mail] resend failed', response.status, detail.slice(0, 200))
-      return { ok: false, message: '邮件发送失败，请稍后重试' }
+      console.error('[auth-mail] resend failed', {
+        status: response.status,
+        from,
+        to: options.to,
+        detail: detail.slice(0, 500),
+      })
+      // Surface common Resend setup issues without leaking secrets.
+      let message = '邮件发送失败，请稍后重试'
+      if (response.status === 401 || response.status === 403) {
+        message =
+          '邮件服务认证失败：请检查 RESEND_API_KEY 是否有效，以及 MAIL_FROM 域名是否已在 Resend 验证'
+      } else if (response.status === 422) {
+        message =
+          '邮件参数被拒绝：请检查 MAIL_FROM 格式（如 拼豆助手 <noreply@你的已验证域名>）与收件邮箱'
+      }
+      return { ok: false, mode: 'resend', message }
     }
-    return { ok: true, mode: 'resend' }
+
+    let id: string | undefined
+    try {
+      const parsed = JSON.parse(detail) as { id?: string }
+      if (typeof parsed.id === 'string') id = parsed.id
+    } catch {
+      // ignore non-JSON success body
+    }
+    console.info('[auth-mail] resend ok', { to: options.to, from, id: id ?? null })
+    return { ok: true, mode: 'resend', id }
   } catch (err) {
     console.error('[auth-mail] resend error', err)
-    return { ok: false, message: '邮件发送失败，请稍后重试' }
+    return { ok: false, mode: 'resend', message: '邮件发送失败，请稍后重试' }
   }
 }
 

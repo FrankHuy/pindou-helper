@@ -144,18 +144,25 @@ Git 连接 Cloudflare 时：Build command `npm run build`，以仓库 `wrangler.
 
 ## 3. Resend（发信）配置步骤
 
-1. 注册 [Resend](https://resend.com)，创建 API Key → 放入 Worker Secret **`RESEND_API_KEY`**。
+1. 注册 [Resend](https://resend.com)，创建 API Key → 放入 **该 Worker 生产环境** 的 Secret **`RESEND_API_KEY`**（不是 GitHub Actions、不是 Vite `VITE_*`、不是仅本地 `.env`）。
 2. **Domains** 添加你的域名（推荐 `frankiehu.top`），按提示加 DNS（SPF/DKIM 等），等到 **Verified**。
 3. 设置 Worker **`MAIL_FROM`**，例如：
    - `拼豆助手 <noreply@frankiehu.top>`
-   - 或 `Pindou Helper <auth@frankiehu.top>`
-4. 用真实白名单邮箱走一遍「注册 → 收验证邮件 → 点链接」。
-5. 若一直收不到：查 Resend Dashboard 投递日志 + Worker 日志是否 `resend failed`；检查垃圾箱；确认收件域在产品白名单内。
+   - 或 `noreply@frankiehu.top`
+   - **From 的域名必须是 Resend 里已 Verified 的域名**（不能随便写未验证域）。
+4. 改完 Secrets/变量后，建议 **再 Deploy 一次** Worker（部分绑定变更后更稳妥）。
+5. 用真实白名单邮箱走一遍「注册 → 收验证邮件 → 点链接」。
+6. 若一直收不到：
+   - 看注册接口返回的 `message` / `emailSent`（新版本会写明未发出原因）。
+   - Cloudflare Worker **Logs**：搜 `[auth-mail:dev]`（= 线上读不到 Key）或 `[auth-mail] resend failed`（= 调了 Resend 但被拒）。
+   - Resend Dashboard → **Emails / Logs**：有没有出站记录。
+   - 垃圾箱；收件邮箱是否在产品域名白名单内。
 
 **注意：**
 
 - 发件域（`MAIL_FROM`）与用户注册邮箱域名（白名单）是两件事：用户可用 `qq.com` / `gmail.com` 注册，信仍从你的 `frankiehu.top` 发出。
 - 超管邮箱 `Frank@Frankiehu.top` 属于白名单域 `frankiehu.top`，可直接注册。
+- **本地用同一 Key 能发信，不代表线上 Worker 一定绑了这两个变量**——最常见问题是变量加在了错误的项目/环境（Preview vs Production、Pages vs Worker）。
 
 ---
 

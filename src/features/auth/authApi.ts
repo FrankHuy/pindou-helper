@@ -119,7 +119,12 @@ export async function registerAccount(input: {
   email: string
   password: string
   turnstileToken?: string
-}): Promise<{ user: PublicUser | null; message: string }> {
+}): Promise<{
+  user: PublicUser | null
+  message: string
+  emailSent?: boolean
+  mailMode?: string
+}> {
   return authFetch('/api/auth/register', {
     method: 'POST',
     json: {

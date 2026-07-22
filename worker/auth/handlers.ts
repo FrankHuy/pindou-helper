@@ -206,8 +206,12 @@ export async function handleRegister(request: Request, env: AuthWorkerEnv): Prom
   const mail = buildVerifyEmail(origin, verifyToken)
   const sent = await sendAuthEmail(env, { to: email, ...mail })
   if (!sent.ok) {
-    // User exists; still allow login + resend. Surface soft failure.
-    console.error('[auth] verify mail failed after register', sent.message)
+    // User exists; still allow login + resend. Surface soft failure with real reason.
+    console.error('[auth] verify mail failed after register', {
+      mode: sent.mode,
+      message: sent.message,
+      origin,
+    })
   }
 
   const session = await createSession(env.DB, userId, { ip, fpHash })
@@ -215,9 +219,10 @@ export async function handleRegister(request: Request, env: AuthWorkerEnv): Prom
   const response = jsonOk({
     user: user ? publicUser(user) : null,
     emailSent: sent.ok,
+    mailMode: sent.mode,
     message: sent.ok
-      ? '注册成功，请查收验证邮件'
-      : '注册成功，但验证邮件发送失败，请稍后重新发送',
+      ? '注册成功，请查收验证邮件（若未看到请检查垃圾箱）'
+      : `注册成功，但验证邮件未发出：${sent.message}`,
   })
   return withSessionCookie(response, session.secret, session.expiresAt, request)
 }

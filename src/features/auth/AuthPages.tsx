@@ -154,8 +154,13 @@ function RegisterForm({
       const result = await registerAccount({ email, password, turnstileToken: token })
       setInfo(result.message)
       onAuthed()
-      // Stay briefly then home — user may need to verify email later for AI.
-      onNavigate('app')
+      // Stay on register when mail failed so the operator/user can read the reason.
+      // On success, go home after a short delay so the verify hint is visible.
+      if (result.emailSent === false) {
+        // keep form; user can open 验证页 / 重新发送
+      } else {
+        window.setTimeout(() => onNavigate('app'), 2200)
+      }
     } catch (err) {
       setError(err instanceof AuthRequestError ? err.message : '注册失败')
       setResetTs((n) => n + 1)
