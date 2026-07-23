@@ -19,7 +19,12 @@ import {
   readJsonBody,
   requestOrigin,
 } from './http'
-import { buildResetEmail, buildVerifyEmail, sendAuthEmail } from './mail'
+import {
+  buildResetEmail,
+  buildVerifyEmail,
+  mailFailPublicFields,
+  sendAuthEmail,
+} from './mail'
 import {
   hashPassword,
   resolvePbkdf2Iterations,
@@ -211,6 +216,7 @@ export async function handleRegister(request: Request, env: AuthWorkerEnv): Prom
       mode: sent.mode,
       message: sent.message,
       origin,
+      ...mailFailPublicFields(sent),
     })
   }
 
@@ -223,6 +229,13 @@ export async function handleRegister(request: Request, env: AuthWorkerEnv): Prom
     message: sent.ok
       ? '注册成功，请查收验证邮件（若未看到请检查垃圾箱）'
       : `注册成功，但验证邮件未发出：${sent.message}`,
+    hasResendApiKey: sent.probe.hasResendApiKey,
+    hasMailFrom: sent.probe.hasMailFrom,
+    mailFrom: sent.probe.mailFrom,
+    effectiveFrom: sent.probe.effectiveFrom,
+    ...(!sent.ok && 'resendStatus' in sent && sent.resendStatus != null
+      ? { resendStatus: sent.resendStatus, resendDetail: sent.resendDetail }
+      : {}),
   })
   return withSessionCookie(response, session.secret, session.expiresAt, request)
 }
@@ -373,8 +386,24 @@ export async function handleResendVerify(
   const verifyToken = await issueEmailToken(env.DB, user.id, 'verify', VERIFY_TTL_MS)
   const mail = buildVerifyEmail(requestOrigin(request), verifyToken)
   const sent = await sendAuthEmail(env, { to: user.email, ...mail })
-  if (!sent.ok) return jsonError(502, 'mail_failed', sent.message)
-  return jsonOk({ ok: true, message: '验证邮件已发送，请查收' })
+  if (!sent.ok) {
+    return Response.json(
+      {
+        error: 'mail_failed',
+        message: sent.message,
+        ...mailFailPublicFields(sent),
+      },
+      { status: 502 },
+    )
+  }
+  return jsonOk({
+    ok: true,
+    message: '验证邮件已发送，请查收',
+    hasResendApiKey: sent.probe.hasResendApiKey,
+    hasMailFrom: sent.probe.hasMailFrom,
+    mailFrom: sent.probe.mailFrom,
+    effectiveFrom: sent.probe.effectiveFrom,
+  })
 }
 
 export async function handleForgot(request: Request, env: AuthWorkerEnv): Promise<Response> {

@@ -3,7 +3,7 @@
  *
  * When RESEND_API_KEY is unset: do NOT claim the email was delivered.
  * We still log the verify/reset URL for local/dev operators (`mode: 'console'`).
- * Never log passwords or raw tokens beyond the full URL needed for manual testing.
+ * Never log or return the API key value.
  */
 
 export type MailEnv = {
@@ -11,9 +11,39 @@ export type MailEnv = {
   MAIL_FROM?: string
 }
 
+/** Safe diagnostics for operators — never includes API key material. */
+export type MailConfigProbe = {
+  hasResendApiKey: boolean
+  hasMailFrom: boolean
+  /** Raw MAIL_FROM env after trim, or null if unset/empty. */
+  mailFrom: string | null
+  /** Actual `from` sent to Resend (includes default if MAIL_FROM empty). */
+  effectiveFrom: string
+}
+
 export type SendMailResult =
-  | { ok: true; mode: 'resend'; id?: string }
-  | { ok: false; mode: 'console' | 'resend'; message: string }
+  | { ok: true; mode: 'resend'; id?: string; probe: MailConfigProbe }
+  | {
+      ok: false
+      mode: 'console' | 'resend'
+      message: string
+      probe: MailConfigProbe
+      resendStatus?: number
+      /** Truncated Resend error body (no secrets). */
+      resendDetail?: string
+    }
+
+const DEFAULT_FROM = 'Pindou Helper <onboarding@resend.dev>'
+
+export function probeMailConfig(env: MailEnv): MailConfigProbe {
+  const rawFrom = env.MAIL_FROM?.trim() || ''
+  return {
+    hasResendApiKey: Boolean(env.RESEND_API_KEY?.trim()),
+    hasMailFrom: Boolean(rawFrom),
+    mailFrom: rawFrom || null,
+    effectiveFrom: rawFrom || DEFAULT_FROM,
+  }
+}
 
 export async function sendAuthEmail(
   env: MailEnv,
@@ -25,15 +55,16 @@ export async function sendAuthEmail(
   },
 ): Promise<SendMailResult> {
   const apiKey = env.RESEND_API_KEY?.trim()
-  const from = env.MAIL_FROM?.trim() || 'Pindou Helper <onboarding@resend.dev>'
+  const probe = probeMailConfig(env)
+  const from = probe.effectiveFrom
 
   if (!apiKey) {
-    // Dev fallback: operator can open the link from Worker logs.
-    // Callers must treat this as "not delivered" (ok: false).
     console.info('[auth-mail:dev] RESEND_API_KEY missing — email not sent', {
       to: options.to,
       subject: options.subject,
-      from,
+      hasMailFrom: probe.hasMailFrom,
+      mailFrom: probe.mailFrom,
+      effectiveFrom: from,
       text: options.text,
     })
     return {
@@ -41,6 +72,7 @@ export async function sendAuthEmail(
       mode: 'console',
       message:
         '服务器未配置 RESEND_API_KEY，验证邮件未发出（请在 Cloudflare Worker 运行时 Secrets 中配置）',
+      probe,
     }
   }
 
@@ -65,9 +97,11 @@ export async function sendAuthEmail(
         status: response.status,
         from,
         to: options.to,
+        hasResendApiKey: true,
+        hasMailFrom: probe.hasMailFrom,
+        mailFrom: probe.mailFrom,
         detail: detail.slice(0, 500),
       })
-      // Surface common Resend setup issues without leaking secrets.
       let message = '邮件发送失败，请稍后重试'
       if (response.status === 401 || response.status === 403) {
         message =
@@ -76,7 +110,14 @@ export async function sendAuthEmail(
         message =
           '邮件参数被拒绝：请检查 MAIL_FROM 格式（如 拼豆助手 <noreply@你的已验证域名>）与收件邮箱'
       }
-      return { ok: false, mode: 'resend', message }
+      return {
+        ok: false,
+        mode: 'resend',
+        message,
+        probe,
+        resendStatus: response.status,
+        resendDetail: detail.slice(0, 300) || undefined,
+      }
     }
 
     let id: string | undefined
@@ -86,11 +127,34 @@ export async function sendAuthEmail(
     } catch {
       // ignore non-JSON success body
     }
-    console.info('[auth-mail] resend ok', { to: options.to, from, id: id ?? null })
-    return { ok: true, mode: 'resend', id }
+    console.info('[auth-mail] resend ok', {
+      to: options.to,
+      from,
+      id: id ?? null,
+      hasMailFrom: probe.hasMailFrom,
+    })
+    return { ok: true, mode: 'resend', id, probe }
   } catch (err) {
     console.error('[auth-mail] resend error', err)
-    return { ok: false, mode: 'resend', message: '邮件发送失败，请稍后重试' }
+    return {
+      ok: false,
+      mode: 'resend',
+      message: '邮件发送失败，请稍后重试',
+      probe,
+    }
+  }
+}
+
+/** JSON fields for mail_failed responses (never includes API key). */
+export function mailFailPublicFields(sent: Extract<SendMailResult, { ok: false }>): Record<string, unknown> {
+  return {
+    hasResendApiKey: sent.probe.hasResendApiKey,
+    hasMailFrom: sent.probe.hasMailFrom,
+    mailFrom: sent.probe.mailFrom,
+    effectiveFrom: sent.probe.effectiveFrom,
+    mailMode: sent.mode,
+    ...(sent.resendStatus != null ? { resendStatus: sent.resendStatus } : {}),
+    ...(sent.resendDetail ? { resendDetail: sent.resendDetail } : {}),
   }
 }
 
