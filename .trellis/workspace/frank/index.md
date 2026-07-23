@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 10
-- **Last Active**: 2026-07-22
+- **Total Sessions**: 11
+- **Last Active**: 2026-07-23
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~353 | Active |
+| `journal-1.md` | ~386 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 11 | 2026-07-23 | 收尾 Bootstrap Guidelines | `37d0245` | `main` |
 | 10 | 2026-07-22 | 用户体系与AI成本治理 Phase 1 | `196c582`, `de4233b`, `e040460`, `150de96` | `main` |
 | 9 | 2026-07-21 | 图纸每5行辅助分隔线 | `1da9fd6`, `6409018` | `main` |
 | 8 | 2026-07-21 | XHS HD image download: bare original + optional JPG | `c149745`, `543bea1` | `main` |
