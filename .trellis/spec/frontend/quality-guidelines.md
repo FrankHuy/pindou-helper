@@ -6,7 +6,7 @@
 
 ## Overview
 
-Stack: Vite + React + TypeScript SPA, optional Cloudflare Worker (`worker/`) for XHS + public config.  
+Stack: Vite + React + TypeScript SPA, Cloudflare Worker (`worker/`) for XHS, auth, AI guards, admin, public config.  
 Checks: `npm run build` (`tsc -b && vite build`), `npm run lint` (oxlint).  
 Prefer pure-frontend algorithms; **no new runtime deps** unless task-approved.
 
@@ -25,8 +25,10 @@ Prefer pure-frontend algorithms; **no new runtime deps** unless task-approved.
 | Browser hotlink of XHS CDN / open proxy | CORS/Referer fail; SSRF — use `/api/xhs/image` + allowlists |
 | Login Cookie / private-note bypass for XHS | Public posts only |
 | Hardcode Turnstile **secret** in repo or client | Secret only as Worker secret |
+| Put `RESEND_API_KEY` / mail secrets in Vite `VITE_*` or build env | Auth mail uses **Worker runtime** `env` only |
+| Claim email sent when `RESEND_API_KEY` missing | Dev log mode is undelivered — surface `emailSent: false` |
 | Dual `colorDistance` implementations | Use `src/lib/color-match.ts` only |
-| Privacy page copy about 小红书 / share download | Product compliance boundary for that page |
+| Privacy page copy that denies all accounts while product has login | Keep Privacy aligned with optional account + AI |
 
 ---
 
@@ -68,9 +70,12 @@ Prefer pure-frontend algorithms; **no new runtime deps** unless task-approved.
 
 1. Every redirect hop for XHS fetch validated against allowlists
 2. Image proxy: HTTPS + host allowlist; no open proxy
-3. Turnstile protects **`POST /api/xhs/parse` only** when `TURNSTILE_SECRET` set; `/api/xhs/image` not Turnstile-gated
-4. `GET /api/config` exposes site key + `turnstileRequired` only — never the secret
-5. JSON errors: `{ error: code, message: '中文…' }`
+3. Turnstile: **`POST /api/xhs/parse`** and **auth register/login/forgot** when `TURNSTILE_SECRET` set; site key via `GET /api/config` only — never the secret
+4. Explicit Turnstile: mount host **after** site key known; retry host ref a few frames; do not put unstable callbacks in the render-effect dep array (use refs)
+5. Auth session cookie `pd_session` HttpOnly; store only token hash in D1; AI routes use `requireAiAccess`
+6. Mail: `RESEND_API_KEY` + `MAIL_FROM` runtime; public mail diagnostics at most `hasResendApiKey` / `hasMailFrom` (never key value)
+7. Admin: role checks on Worker; same-origin for mutating `/api/admin/*`
+8. JSON errors: `{ error: code, message: '中文…' }`
 
 ---
 
@@ -87,6 +92,7 @@ No unit test runner mandated yet. Minimum gates:
    - disable a used code → absent from next `counts`
 4. Manual for workshop: export from bead tab → workshop upload → highlight + split retry
 5. Manual for XHS when workerd available: invalid URL; parse with/without Turnstile secret behavior
+6. Manual for auth when D1+Resend configured: register allowlist domain; Turnstile on `/register`; resend via `/verify`; AI ping requires verified session
 
 ---
 

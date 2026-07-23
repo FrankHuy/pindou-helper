@@ -11,7 +11,8 @@ Product surfaces:
 1. **拼豆图纸** — local photo/illustration → MARD bead pattern (`App.tsx` + `src/lib/pattern.ts`)
 2. **拼豆工作间** — import existing sheet, color highlight (`features/workshop` + `lib/workshop`)
 3. **小红书下图** — public note parse + image proxy (`features/xhs` + `worker/xhs`)
-4. **Privacy / About** — path shell pages (`features/info`); Privacy copy is **bead-local only**
+4. **账号 / AI 护栏 / 极简管理** — `features/auth`, `features/admin` + `worker/auth|guard|admin|db` (D1)
+5. **Privacy / About** — path shell pages (`features/info`); local tools + optional account/AI (not an XHS deep-dive)
 
 Domain algorithms stay in `src/lib/**` (no React). Worker owns `/api/*` only.
 
@@ -35,10 +36,16 @@ Before changing **XHS / Worker / Turnstile**:
 
 7. [XHS Download](./xhs-download.md) — allowlists, parse/proxy, `/api/config`, Turnstile matrix
 
+Before changing **auth / admin / AI quota / D1**:
+
+8. [Directory Structure](./directory-structure.md) — `features/auth|admin`, `worker/auth|guard|admin|db`
+9. [Quality Guidelines](./quality-guidelines.md) — session cookie, Resend runtime secrets, Turnstile host mount
+10. Operator deploy notes: `docs/deploy-auth.md` (not injected as code-spec)
+
 Before changing **shell / info pages / tabs**:
 
-8. [Component Guidelines](./component-guidelines.md)
-9. [Hook Guidelines](./hook-guidelines.md) — when *not* to extract hooks
+11. [Component Guidelines](./component-guidelines.md)
+12. [Hook Guidelines](./hook-guidelines.md) — when *not* to extract hooks
 
 Always skim [Quality Guidelines](./quality-guidelines.md) for privacy and dependency rules.
 
@@ -79,13 +86,21 @@ Always skim [Quality Guidelines](./quality-guidelines.md) for privacy and depend
 ### XHS
 
 1. **Same-origin image proxy** — UI never hotlinks CDN.
-2. **Turnstile on parse only** — secret on Worker; site key via `/api/config`.
-3. **No ZIP / login bypass** — public posts, per-image save.
+2. **Turnstile on parse** — secret on Worker; site key via `/api/config` (auth reuses the same config).
+3. **No ZIP / login bypass** — public posts only.
+
+### Auth / AI cost / admin
+
+1. **Workers + D1 self-hosted auth** — not Clerk/Supabase; binding name **`DB`**.
+2. **AI expensive routes force login** — verified email, per-user daily quota, IP/fp associate caps, global circuit (`worker/guard/*`).
+3. **Resend is runtime Worker env** — `RESEND_API_KEY` + `MAIL_FROM`; never `VITE_*` / build env.
+4. **Turnstile explicit render** — wait for site key + host mount (auth `TurnstileField`); do not race empty ref.
+5. **Mini admin** — SPA `/admin` + `/api/admin/*`; server role checks; super-only allowlist/role.
 
 ### Shell / privacy
 
-1. **No react-router** — `ShellPage` + History API; SPA fallback on assets.
-2. **Privacy page omits XHS** — intentional product wording, not a security control.
+1. **No react-router** — `ShellPage` + History API; SPA fallback on assets (`/login`, `/register`, `/verify`, `/admin`, …).
+2. **Privacy** — local bead/workshop not uploaded; optional account + AI login gates; XHS remains share-URL only.
 3. **About tip QR** — unlabeled; assets under `public/tip/`.
 
 ---
