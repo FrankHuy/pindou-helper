@@ -225,17 +225,11 @@ export async function handleRegister(request: Request, env: AuthWorkerEnv): Prom
   const response = jsonOk({
     user: user ? publicUser(user) : null,
     emailSent: sent.ok,
-    mailMode: sent.mode,
     message: sent.ok
       ? '注册成功，请查收验证邮件（若未看到请检查垃圾箱）'
       : `注册成功，但验证邮件未发出：${sent.message}`,
     hasResendApiKey: sent.probe.hasResendApiKey,
     hasMailFrom: sent.probe.hasMailFrom,
-    mailFrom: sent.probe.mailFrom,
-    effectiveFrom: sent.probe.effectiveFrom,
-    ...(!sent.ok && 'resendStatus' in sent && sent.resendStatus != null
-      ? { resendStatus: sent.resendStatus, resendDetail: sent.resendDetail }
-      : {}),
   })
   return withSessionCookie(response, session.secret, session.expiresAt, request)
 }
@@ -401,8 +395,6 @@ export async function handleResendVerify(
     message: '验证邮件已发送，请查收',
     hasResendApiKey: sent.probe.hasResendApiKey,
     hasMailFrom: sent.probe.hasMailFrom,
-    mailFrom: sent.probe.mailFrom,
-    effectiveFrom: sent.probe.effectiveFrom,
   })
 }
 

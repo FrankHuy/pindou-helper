@@ -11,14 +11,10 @@ export type MailEnv = {
   MAIL_FROM?: string
 }
 
-/** Safe diagnostics for operators — never includes API key material. */
+/** Safe diagnostics for operators — never includes API key or from address. */
 export type MailConfigProbe = {
   hasResendApiKey: boolean
   hasMailFrom: boolean
-  /** Raw MAIL_FROM env after trim, or null if unset/empty. */
-  mailFrom: string | null
-  /** Actual `from` sent to Resend (includes default if MAIL_FROM empty). */
-  effectiveFrom: string
 }
 
 export type SendMailResult =
@@ -28,21 +24,19 @@ export type SendMailResult =
       mode: 'console' | 'resend'
       message: string
       probe: MailConfigProbe
-      resendStatus?: number
-      /** Truncated Resend error body (no secrets). */
-      resendDetail?: string
     }
 
 const DEFAULT_FROM = 'Pindou Helper <onboarding@resend.dev>'
 
 export function probeMailConfig(env: MailEnv): MailConfigProbe {
-  const rawFrom = env.MAIL_FROM?.trim() || ''
   return {
     hasResendApiKey: Boolean(env.RESEND_API_KEY?.trim()),
-    hasMailFrom: Boolean(rawFrom),
-    mailFrom: rawFrom || null,
-    effectiveFrom: rawFrom || DEFAULT_FROM,
+    hasMailFrom: Boolean(env.MAIL_FROM?.trim()),
   }
+}
+
+function effectiveFrom(env: MailEnv): string {
+  return env.MAIL_FROM?.trim() || DEFAULT_FROM
 }
 
 export async function sendAuthEmail(
@@ -56,15 +50,14 @@ export async function sendAuthEmail(
 ): Promise<SendMailResult> {
   const apiKey = env.RESEND_API_KEY?.trim()
   const probe = probeMailConfig(env)
-  const from = probe.effectiveFrom
+  const from = effectiveFrom(env)
 
   if (!apiKey) {
     console.info('[auth-mail:dev] RESEND_API_KEY missing — email not sent', {
       to: options.to,
       subject: options.subject,
       hasMailFrom: probe.hasMailFrom,
-      mailFrom: probe.mailFrom,
-      effectiveFrom: from,
+      from,
       text: options.text,
     })
     return {
@@ -99,7 +92,6 @@ export async function sendAuthEmail(
         to: options.to,
         hasResendApiKey: true,
         hasMailFrom: probe.hasMailFrom,
-        mailFrom: probe.mailFrom,
         detail: detail.slice(0, 500),
       })
       let message = '邮件发送失败，请稍后重试'
@@ -115,8 +107,6 @@ export async function sendAuthEmail(
         mode: 'resend',
         message,
         probe,
-        resendStatus: response.status,
-        resendDetail: detail.slice(0, 300) || undefined,
       }
     }
 
@@ -145,16 +135,14 @@ export async function sendAuthEmail(
   }
 }
 
-/** JSON fields for mail_failed responses (never includes API key). */
-export function mailFailPublicFields(sent: Extract<SendMailResult, { ok: false }>): Record<string, unknown> {
+/** JSON fields for mail_failed responses (never includes API key or from address). */
+export function mailFailPublicFields(sent: Extract<SendMailResult, { ok: false }>): {
+  hasResendApiKey: boolean
+  hasMailFrom: boolean
+} {
   return {
     hasResendApiKey: sent.probe.hasResendApiKey,
     hasMailFrom: sent.probe.hasMailFrom,
-    mailFrom: sent.probe.mailFrom,
-    effectiveFrom: sent.probe.effectiveFrom,
-    mailMode: sent.mode,
-    ...(sent.resendStatus != null ? { resendStatus: sent.resendStatus } : {}),
-    ...(sent.resendDetail ? { resendDetail: sent.resendDetail } : {}),
   }
 }
 
