@@ -1,11 +1,12 @@
 /**
- * AI cost guard pipeline (design §4).
+ * AI cost guard pipeline (design §4 + image-edit units).
  * Order: session → banned → email verified → circuit → global → user → ip/fp associate.
+ * Personal daily limit is role-aware (user/vip/admin); billable unit = image when units>1.
  */
 
 import { getConfigBool, getConfigInt } from '../db/config'
 import type { UserRow } from '../db/types'
-import { getUsageCount, isUnderCap, utcDayKey } from '../db/usage'
+import { getUsageCount, hasRemainingUnits, utcDayKey } from '../db/usage'
 import { sha256Base64Url } from '../auth/crypto'
 import { clientIp, jsonError, readClientFp } from '../auth/http'
 import { resolveSessionUser } from '../auth/session'
@@ -21,6 +22,7 @@ export type AiGuardErrorCode =
 
 export type AiQuotaSnapshot = {
   day: string
+  /** Personal daily limit; -1 means unlimited (admin/super). */
   userLimit: number
   userUsed: number
   userRemaining: number
@@ -47,15 +49,54 @@ export type AiAccessResult =
   | { ok: true; ctx: AiAccessContext }
   | { ok: false; response: Response }
 
+export type RequireAiAccessOptions = {
+  /**
+   * Minimum remaining billable units required before calling upstream.
+   * Image edit passes `n` (1–4); ping uses default 1.
+   */
+  units?: number
+}
+
+/**
+ * Role-based personal daily image quota.
+ * - override wins when set (≥0)
+ * - admin / super_admin: unlimited (-1)
+ * - vip role or vip plan: image_daily_quota_vip
+ * - else: image_daily_quota_user
+ */
 export function effectiveUserDailyQuota(
   user: UserRow,
-  defaultDailyQuota: number,
+  quotas: { user: number; vip: number },
 ): number {
   if (user.daily_quota_override != null && user.daily_quota_override >= 0) {
     return user.daily_quota_override
   }
-  // VIP plan/role may use a higher default later; Phase 1 same as free.
-  return defaultDailyQuota
+  if (user.role === 'admin' || user.role === 'super_admin') {
+    return -1
+  }
+  if (user.role === 'vip' || user.plan === 'vip') {
+    return quotas.vip
+  }
+  return quotas.user
+}
+
+export async function loadRoleQuotaConfig(db: D1Database): Promise<{
+  userQuota: number
+  vipQuota: number
+  globalLimit: number
+  associateLimit: number
+}> {
+  const [userQuota, vipQuota, imageGlobal, legacyGlobal, associateLimit] = await Promise.all([
+    getConfigInt(db, 'image_daily_quota_user', 6),
+    getConfigInt(db, 'image_daily_quota_vip', 20),
+    getConfigInt(db, 'image_global_daily_cap', 500),
+    getConfigInt(db, 'global_daily_cap', 500),
+    getConfigInt(db, 'ip_fp_daily_cap', 10),
+  ])
+  // Prefer image_global_daily_cap; fall back to legacy global_daily_cap if image key missing in old DBs
+  // (getConfigInt already returns default 500 for both).
+  const globalLimit = imageGlobal > 0 ? imageGlobal : legacyGlobal
+  return { userQuota, vipQuota, globalLimit, associateLimit }
 }
 
 export async function buildQuotaSnapshot(
@@ -64,10 +105,8 @@ export async function buildQuotaSnapshot(
   opts?: { ip?: string | null; fpHash?: string | null },
 ): Promise<AiQuotaSnapshot> {
   const day = utcDayKey()
-  const defaultQuota = await getConfigInt(db, 'default_daily_quota', 3)
-  const userLimit = effectiveUserDailyQuota(user, defaultQuota)
-  const globalLimit = await getConfigInt(db, 'global_daily_cap', 500)
-  const associateLimit = await getConfigInt(db, 'ip_fp_daily_cap', 10)
+  const { userQuota, vipQuota, globalLimit, associateLimit } = await loadRoleQuotaConfig(db)
+  const userLimit = effectiveUserDailyQuota(user, { user: userQuota, vip: vipQuota })
   const circuitOpen = await getConfigBool(db, 'circuit_open', false)
 
   const [userUsed, globalUsed, ipUsed, fpUsed] = await Promise.all([
@@ -81,7 +120,8 @@ export async function buildQuotaSnapshot(
     day,
     userLimit,
     userUsed,
-    userRemaining: Math.max(0, userLimit - userUsed),
+    // -1 remaining means unlimited personal quota (admin/super).
+    userRemaining: userLimit < 0 ? -1 : Math.max(0, userLimit - userUsed),
     globalLimit,
     globalUsed,
     globalRemaining: Math.max(0, globalLimit - globalUsed),
@@ -96,12 +136,16 @@ export async function buildQuotaSnapshot(
 /**
  * Full pre-flight for `/api/ai/*`. Does not deduct usage.
  * Pass optional `body` so fingerprint can be read from JSON as well as header.
+ * `units` reserves remaining capacity for multi-image image-edit submits.
  */
 export async function requireAiAccess(
   db: D1Database,
   request: Request,
   body?: Record<string, unknown>,
+  options?: RequireAiAccessOptions,
 ): Promise<AiAccessResult> {
+  const units = Math.max(1, Math.floor(options?.units ?? 1))
+
   const sessionUser = await resolveSessionUser(db, request)
   if (!sessionUser) {
     return {
@@ -135,21 +179,26 @@ export async function requireAiAccess(
     }
   }
 
-  const globalLimit = await getConfigInt(db, 'global_daily_cap', 500)
-  const globalCheck = await isUnderCap(db, 'global', 'global', globalLimit, day)
+  const { userQuota, vipQuota, globalLimit, associateLimit } = await loadRoleQuotaConfig(db)
+
+  const globalCheck = await hasRemainingUnits(db, 'global', 'global', globalLimit, units, day)
   if (!globalCheck.ok) {
-    console.info('[guard] quota_hit', { kind: 'global', count: globalCheck.count })
+    console.info('[guard] quota_hit', { kind: 'global', count: globalCheck.count, units })
     return {
       ok: false,
       response: jsonError(429, 'global_quota', '今日全站 AI 调用已达上限，请明日再试'),
     }
   }
 
-  const defaultQuota = await getConfigInt(db, 'default_daily_quota', 3)
-  const userLimit = effectiveUserDailyQuota(user, defaultQuota)
-  const userCheck = await isUnderCap(db, 'user', user.id, userLimit, day)
+  const userLimit = effectiveUserDailyQuota(user, { user: userQuota, vip: vipQuota })
+  const userCheck = await hasRemainingUnits(db, 'user', user.id, userLimit, units, day)
   if (!userCheck.ok) {
-    console.info('[guard] quota_hit', { kind: 'user', userId: user.id, count: userCheck.count })
+    console.info('[guard] quota_hit', {
+      kind: 'user',
+      userId: user.id,
+      count: userCheck.count,
+      units,
+    })
     return {
       ok: false,
       response: jsonError(429, 'user_quota', '今日个人 AI 配额已用完，请明日再试'),
@@ -157,10 +206,10 @@ export async function requireAiAccess(
   }
 
   const ip = clientIp(request)
-  const associateLimit = await getConfigInt(db, 'ip_fp_daily_cap', 10)
-  const ipCheck = await isUnderCap(db, 'ip', ip, associateLimit, day)
+  // Associate caps are per-request style limits; still require remaining ≥ units.
+  const ipCheck = await hasRemainingUnits(db, 'ip', ip, associateLimit, units, day)
   if (!ipCheck.ok) {
-    console.info('[guard] quota_hit', { kind: 'ip', count: ipCheck.count })
+    console.info('[guard] quota_hit', { kind: 'ip', count: ipCheck.count, units })
     return {
       ok: false,
       response: jsonError(429, 'associate_quota', '当前网络今日 AI 调用过多，请明日再试'),
@@ -171,9 +220,9 @@ export async function requireAiAccess(
   const fpHash = fpRaw ? await sha256Base64Url(fpRaw) : null
   // Missing fingerprint: still enforce IP associate cap (already done). Soft signal only.
   if (fpHash) {
-    const fpCheck = await isUnderCap(db, 'fp', fpHash, associateLimit, day)
+    const fpCheck = await hasRemainingUnits(db, 'fp', fpHash, associateLimit, units, day)
     if (!fpCheck.ok) {
-      console.info('[guard] quota_hit', { kind: 'fp', count: fpCheck.count })
+      console.info('[guard] quota_hit', { kind: 'fp', count: fpCheck.count, units })
       return {
         ok: false,
         response: jsonError(429, 'associate_quota', '当前设备今日 AI 调用过多，请明日再试'),

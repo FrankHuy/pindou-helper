@@ -49,7 +49,33 @@ export async function isUnderCap(
   cap: number,
   day = utcDayKey(),
 ): Promise<{ ok: true; count: number } | { ok: false; count: number }> {
+  // cap < 0 means unlimited (admin/super personal quota).
+  if (cap < 0) {
+    const count = await getUsageCount(db, subjectType, subjectKey, day)
+    return { ok: true, count }
+  }
   const count = await getUsageCount(db, subjectType, subjectKey, day)
   if (count >= cap) return { ok: false, count }
   return { ok: true, count }
+}
+
+/**
+ * Require at least `needed` remaining units under a daily cap.
+ * cap < 0 → unlimited (always ok).
+ */
+export async function hasRemainingUnits(
+  db: D1Database,
+  subjectType: UsageSubjectType,
+  subjectKey: string,
+  cap: number,
+  needed: number,
+  day = utcDayKey(),
+): Promise<{ ok: true; count: number; remaining: number } | { ok: false; count: number; remaining: number }> {
+  const count = await getUsageCount(db, subjectType, subjectKey, day)
+  if (cap < 0) {
+    return { ok: true, count, remaining: Number.MAX_SAFE_INTEGER }
+  }
+  const remaining = Math.max(0, cap - count)
+  if (remaining < needed) return { ok: false, count, remaining }
+  return { ok: true, count, remaining }
 }

@@ -19,8 +19,20 @@ export type UsageSummary = {
   circuitOpen: boolean
   global: { used: number; limit: number; remaining: number }
   defaultDailyQuota: number
+  imageDailyQuotaUser?: number
+  imageDailyQuotaVip?: number
+  imageGlobalDailyCap?: number
+  imageEditEnabled?: boolean
   associateLimit: number
   topUsers: { id: string; email: string; role: string; count: number }[]
+}
+
+export type ImageQuotaConfig = {
+  imageDailyQuotaUser: number
+  imageDailyQuotaVip: number
+  imageGlobalDailyCap: number
+  imageEditEnabled: boolean
+  message?: string
 }
 
 export type AdminApiError = {
@@ -130,6 +142,26 @@ export async function setUserRole(
 
 export async function fetchUsageSummary(signal?: AbortSignal): Promise<UsageSummary> {
   return adminFetch('/api/admin/usage/summary', { method: 'GET', signal })
+}
+
+export async function fetchImageQuotaConfig(
+  signal?: AbortSignal,
+): Promise<ImageQuotaConfig> {
+  return adminFetch('/api/admin/config/image-quota', { method: 'GET', signal })
+}
+
+export async function setImageQuotaConfig(
+  input: Partial<{
+    imageDailyQuotaUser: number
+    imageDailyQuotaVip: number
+    imageGlobalDailyCap: number
+    imageEditEnabled: boolean
+  }>,
+): Promise<ImageQuotaConfig> {
+  return adminFetch('/api/admin/config/image-quota', {
+    method: 'POST',
+    json: input,
+  })
 }
 
 export async function fetchCircuit(signal?: AbortSignal): Promise<{ open: boolean }> {

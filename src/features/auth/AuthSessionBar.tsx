@@ -99,9 +99,12 @@ export default function AuthSessionBar({
     )
   }
 
+  const unlimitedPersonal = me.quota.dailyLimit < 0
   const quotaTitle = me.quota.circuitOpen
     ? '全局熔断中'
-    : `今日配额 ${me.quota.dailyRemaining}/${me.quota.dailyLimit}`
+    : unlimitedPersonal
+      ? '今日配额 个人不限'
+      : `今日配额 ${me.quota.dailyRemaining}/${me.quota.dailyLimit}`
 
   return (
     <div className="auth-session">
@@ -114,22 +117,28 @@ export default function AuthSessionBar({
         </span>
       )}
       <span className="auth-session-quota" title={quotaTitle}>
-        {me.quota.circuitOpen ? '熔断' : `${me.quota.dailyRemaining}/${me.quota.dailyLimit}`}
+        {me.quota.circuitOpen
+          ? '熔断'
+          : unlimitedPersonal
+            ? '不限'
+            : `${me.quota.dailyRemaining}/${me.quota.dailyLimit}`}
       </span>
       {onAdmin && isAdminRole(me.user.role) && (
         <button type="button" className="auth-session-btn" onClick={onAdmin} title="极简管理">
           管理
         </button>
       )}
-      <button
-        type="button"
-        className="auth-session-btn"
-        onClick={() => void onPing()}
-        disabled={busy}
-        title="调用 POST /api/ai/ping 测试配额护栏"
-      >
-        AI 探测
-      </button>
+      {me.user.role === 'super_admin' && (
+        <button
+          type="button"
+          className="auth-session-btn"
+          onClick={() => void onPing()}
+          disabled={busy}
+          title="调用 POST /api/ai/ping 测试配额护栏（仅超管）"
+        >
+          AI 探测
+        </button>
+      )}
       <button
         type="button"
         className="auth-session-btn"

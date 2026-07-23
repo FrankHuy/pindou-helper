@@ -1,0 +1,6 @@
+{"_example": "Fill with {\"file\": \"<path>\", \"reason\": \"<why>\"}. Put spec/research files only — no code paths. Run `python3 .trellis/scripts/get_context.py --mode packages` to list available specs. Delete this line once real entries are added."}
+{"file": ".trellis/tasks/07-23-bead-ai-image-edit/design.md", "reason": "Architecture and API contracts"}
+{"file": ".trellis/tasks/07-23-bead-ai-image-edit/prd.md", "reason": "Requirements"}
+{"file": ".trellis/spec/frontend/directory-structure.md", "reason": "Feature placement"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "Auth AI quality invariants"}
+{"file": ".trellis/spec/frontend/xhs-download.md", "reason": "Turnstile and proxy patterns reference"}

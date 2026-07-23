@@ -358,14 +358,25 @@ export async function handleAdminUsageSummary(
   if (!auth.ok) return auth.response
 
   const day = utcDayKey()
-  const [globalUsed, globalLimit, defaultDailyQuota, associateLimit, circuitOpen] =
-    await Promise.all([
-      getUsageCount(env.DB, 'global', 'global', day),
-      getConfigInt(env.DB, 'global_daily_cap', 500),
-      getConfigInt(env.DB, 'default_daily_quota', 3),
-      getConfigInt(env.DB, 'ip_fp_daily_cap', 10),
-      getConfigBool(env.DB, 'circuit_open', false),
-    ])
+  const [
+    globalUsed,
+    globalLimit,
+    defaultDailyQuota,
+    imageDailyQuotaUser,
+    imageDailyQuotaVip,
+    associateLimit,
+    circuitOpen,
+    imageEditEnabled,
+  ] = await Promise.all([
+    getUsageCount(env.DB, 'global', 'global', day),
+    getConfigInt(env.DB, 'image_global_daily_cap', 500),
+    getConfigInt(env.DB, 'image_daily_quota_user', 6),
+    getConfigInt(env.DB, 'image_daily_quota_user', 6),
+    getConfigInt(env.DB, 'image_daily_quota_vip', 20),
+    getConfigInt(env.DB, 'ip_fp_daily_cap', 10),
+    getConfigBool(env.DB, 'circuit_open', false),
+    getConfigBool(env.DB, 'image_edit_enabled', true),
+  ])
 
   const topResult = await env.DB.prepare(
     `SELECT u.id AS id, u.email AS email, u.role AS role, d.count AS count
@@ -394,6 +405,10 @@ export async function handleAdminUsageSummary(
       remaining: Math.max(0, globalLimit - globalUsed),
     },
     defaultDailyQuota,
+    imageDailyQuotaUser,
+    imageDailyQuotaVip,
+    imageGlobalDailyCap: globalLimit,
+    imageEditEnabled,
     associateLimit,
     topUsers,
   })
@@ -430,6 +445,99 @@ export async function handleAdminCircuitSet(
   await setConfigValue(env.DB, 'circuit_open', open ? 'true' : 'false')
   logAdmin('circuit', auth.session.user, { open })
   return jsonOk({ open, circuitOpen: open, message: open ? '全局熔断已开启' : '全局熔断已关闭' })
+}
+
+/** GET/POST /api/admin/config/image-quota — image daily caps (admin). */
+export async function handleAdminImageQuotaGet(
+  request: Request,
+  env: AdminWorkerEnv,
+): Promise<Response> {
+  const auth = await requireAdmin(env.DB, request)
+  if (!auth.ok) return auth.response
+
+  const [imageDailyQuotaUser, imageDailyQuotaVip, imageGlobalDailyCap, imageEditEnabled] =
+    await Promise.all([
+      getConfigInt(env.DB, 'image_daily_quota_user', 6),
+      getConfigInt(env.DB, 'image_daily_quota_vip', 20),
+      getConfigInt(env.DB, 'image_global_daily_cap', 500),
+      getConfigBool(env.DB, 'image_edit_enabled', true),
+    ])
+
+  return jsonOk({
+    imageDailyQuotaUser,
+    imageDailyQuotaVip,
+    imageGlobalDailyCap,
+    imageEditEnabled,
+  })
+}
+
+export async function handleAdminImageQuotaSet(
+  request: Request,
+  env: AdminWorkerEnv,
+): Promise<Response> {
+  const originErr = assertSameOriginMutating(request)
+  if (originErr) return originErr
+
+  const auth = await requireAdmin(env.DB, request)
+  if (!auth.ok) return auth.response
+
+  const parsed = await readJsonBody(request)
+  if (!parsed.ok) return parsed.response
+  const body = parsed.body
+
+  const parsePositiveInt = (value: unknown, label: string): number | Response => {
+    if (typeof value !== 'number' && typeof value !== 'string') {
+      return jsonError(400, 'invalid_request', `${label} 须为正整数`)
+    }
+    const n = typeof value === 'number' ? value : Number.parseInt(value, 10)
+    if (!Number.isInteger(n) || n < 0 || n > 1_000_000) {
+      return jsonError(400, 'invalid_request', `${label} 须为 0–1000000 的整数`)
+    }
+    return n
+  }
+
+  if (body.imageDailyQuotaUser !== undefined) {
+    const n = parsePositiveInt(body.imageDailyQuotaUser, '普通用户日额度')
+    if (n instanceof Response) return n
+    await setConfigValue(env.DB, 'image_daily_quota_user', String(n))
+    // Keep legacy key loosely aligned for older readers.
+    await setConfigValue(env.DB, 'default_daily_quota', String(n))
+  }
+  if (body.imageDailyQuotaVip !== undefined) {
+    const n = parsePositiveInt(body.imageDailyQuotaVip, 'VIP 日额度')
+    if (n instanceof Response) return n
+    await setConfigValue(env.DB, 'image_daily_quota_vip', String(n))
+  }
+  if (body.imageGlobalDailyCap !== undefined) {
+    const n = parsePositiveInt(body.imageGlobalDailyCap, '全站日上限')
+    if (n instanceof Response) return n
+    await setConfigValue(env.DB, 'image_global_daily_cap', String(n))
+    await setConfigValue(env.DB, 'global_daily_cap', String(n))
+  }
+  if (body.imageEditEnabled !== undefined) {
+    if (typeof body.imageEditEnabled !== 'boolean') {
+      return jsonError(400, 'invalid_request', 'imageEditEnabled 须为布尔值')
+    }
+    await setConfigValue(env.DB, 'image_edit_enabled', body.imageEditEnabled ? 'true' : 'false')
+  }
+
+  logAdmin('image_quota', auth.session.user, body)
+
+  const [imageDailyQuotaUser, imageDailyQuotaVip, imageGlobalDailyCap, imageEditEnabled] =
+    await Promise.all([
+      getConfigInt(env.DB, 'image_daily_quota_user', 6),
+      getConfigInt(env.DB, 'image_daily_quota_vip', 20),
+      getConfigInt(env.DB, 'image_global_daily_cap', 500),
+      getConfigBool(env.DB, 'image_edit_enabled', true),
+    ])
+
+  return jsonOk({
+    imageDailyQuotaUser,
+    imageDailyQuotaVip,
+    imageGlobalDailyCap,
+    imageEditEnabled,
+    message: '出图配额已更新',
+  })
 }
 
 export async function handleAdminAllowlistGet(
@@ -519,6 +627,12 @@ export async function routeAdmin(
   if (pathname === '/api/admin/circuit') {
     if (request.method === 'GET') return handleAdminCircuitGet(request, env)
     if (request.method === 'POST') return handleAdminCircuitSet(request, env)
+    return jsonError(405, 'method_not_allowed', '不支持的请求方法')
+  }
+
+  if (pathname === '/api/admin/config/image-quota') {
+    if (request.method === 'GET') return handleAdminImageQuotaGet(request, env)
+    if (request.method === 'POST') return handleAdminImageQuotaSet(request, env)
     return jsonError(405, 'method_not_allowed', '不支持的请求方法')
   }
 

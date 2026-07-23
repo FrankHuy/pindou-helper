@@ -23,7 +23,8 @@ export default function PrivacyPage({ onBack }: PrivacyPageProps) {
         <h2>拼豆图纸与工作间（本地处理）</h2>
         <p>
           图纸生成与工作间识别在当前设备完成：你选择的图片经浏览器内的画布与算法处理，用于预览、色号统计与导出。
-          <strong>我们不会把你用于本地生成/高亮的原图上传到服务器。</strong>
+          <strong>默认路径不会把你用于本地生成/高亮的原图上传到服务器。</strong>
+          仅当你主动使用「AI 优化」时，才会上传（见下文）。
         </p>
 
         <h2>账号与登录（可选能力）</h2>
@@ -34,9 +35,12 @@ export default function PrivacyPage({ onBack }: PrivacyPageProps) {
         <p>
           注册与找回密码时，我们会向你的邮箱发送<strong>验证链接或重置链接</strong>（非短信）。邮件由我们配置的第三方发信服务代发。
         </p>
+
+        <h2>AI 优化出图（可选）</h2>
         <p>
-          <strong>后续 AI 等可能产生外部调用成本的功能需要登录，并通常要求邮箱已验证；</strong>
-          会按账号与全站策略限制次数，以控制滥用与费用。具体以产品内提示与当时可用功能为准。
+          「拼豆图纸」中的 <strong>AI 优化</strong> 为可选项：不使用时图片仅在本机处理。
+          若你主动提交 AI 优化，所选图片会上传至本站服务器，并由服务器转发至第三方图像编辑服务以生成候选图；密钥仅保存在服务端。
+          该功能需要登录且通常要求邮箱已验证，并按成功返回的图片张数及角色/全站策略计费额度，以控制滥用与费用。
         </p>
 
         <h2>小红书下图</h2>
@@ -68,7 +72,7 @@ export default function PrivacyPage({ onBack }: PrivacyPageProps) {
           <a href="mailto:Frank@Frankiehu.top">Frank@Frankiehu.top</a>
         </p>
 
-        <p className="info-updated">更新日期：2026-07-22</p>
+        <p className="info-updated">更新日期：2026-07-23</p>
       </article>
     </div>
   )

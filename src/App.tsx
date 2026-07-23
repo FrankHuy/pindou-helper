@@ -9,6 +9,7 @@ import type { PublicUser } from './features/auth/authApi'
 import AboutPage from './features/info/AboutPage'
 import PrivacyPage from './features/info/PrivacyPage'
 import './features/info/info.css'
+import BeadAiPanel from './features/bead/BeadAiPanel'
 import BeadWorkshopTab from './features/workshop/BeadWorkshopTab'
 import XhsDownloadTab from './features/xhs/XhsDownloadTab'
 import {
@@ -348,17 +349,25 @@ function App() {
     }, 300)
   }, [generate])
 
+  const applySourceFile = useCallback(
+    (nextFile: File) => {
+      if (imageUrl) URL.revokeObjectURL(imageUrl)
+      setFile(nextFile)
+      setImageUrl(URL.createObjectURL(nextFile))
+      setBgSampleRgb(null)
+      setPickingBg(false)
+      setView('source')
+      // generate immediately for new/replaced source
+      latestRef.current = { ...latestRef.current, file: nextFile, bgSampleRgb: null }
+      void generate()
+    },
+    [generate, imageUrl],
+  )
+
   const handleFile = (event: ChangeEvent<HTMLInputElement>) => {
     const nextFile = event.target.files?.[0]
     if (!nextFile) return
-    if (imageUrl) URL.revokeObjectURL(imageUrl)
-    setFile(nextFile)
-    setImageUrl(URL.createObjectURL(nextFile))
-    setBgSampleRgb(null)
-    setPickingBg(false)
-    // generate immediately for new file
-    latestRef.current = { ...latestRef.current, file: nextFile, bgSampleRgb: null }
-    void generate()
+    applySourceFile(nextFile)
   }
 
   const patchLatest = (partial: Partial<typeof latestRef.current>) => {
@@ -616,6 +625,13 @@ function App() {
       {/* Keep bead workspace mounted so generation state survives tab switches. */}
       <section className={`workspace${tab === 'bead' ? '' : ' is-hidden'}`} aria-hidden={tab !== 'bead'}>
         <aside className="controls">
+          <BeadAiPanel
+            file={file}
+            sessionUser={sessionUser}
+            onLogin={() => navigateShell('login')}
+            onApplyFile={applySourceFile}
+          />
+
           <div className="control-group">
             <span className="control-label">处理模式</span>
             <div className="chip-row" role="group" aria-label="处理模式">

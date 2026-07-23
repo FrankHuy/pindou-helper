@@ -12,6 +12,7 @@ import {
   putAllowlist,
   searchAdminUsers,
   setCircuit,
+  setImageQuotaConfig,
   setUserQuota,
   setUserRole,
   unbanUser,
@@ -53,6 +54,10 @@ export default function AdminPage({ onBack, sessionUser, onNeedLogin }: AdminPag
   const [error, setError] = useState('')
   const [note, setNote] = useState('')
   const [quotaDrafts, setQuotaDrafts] = useState<Record<string, string>>({})
+  const [imageUserQuota, setImageUserQuota] = useState('6')
+  const [imageVipQuota, setImageVipQuota] = useState('20')
+  const [imageGlobalCap, setImageGlobalCap] = useState('500')
+  const [imageEditEnabled, setImageEditEnabled] = useState(true)
 
   useEffect(() => {
     setActor(sessionUser)
@@ -87,6 +92,12 @@ export default function AdminPage({ onBack, sessionUser, onNeedLogin }: AdminPag
         ])
         setUsers(userRes.users)
         setSummary(usage)
+        setImageUserQuota(String(usage.imageDailyQuotaUser ?? usage.defaultDailyQuota ?? 6))
+        setImageVipQuota(String(usage.imageDailyQuotaVip ?? 20))
+        setImageGlobalCap(
+          String(usage.imageGlobalDailyCap ?? usage.global.limit ?? 500),
+        )
+        setImageEditEnabled(usage.imageEditEnabled !== false)
         if (isSuperAdminRole(actor?.role)) {
           try {
             const al = await fetchAllowlist(signal)
@@ -248,6 +259,49 @@ export default function AdminPage({ onBack, sessionUser, onNeedLogin }: AdminPag
       setSummary((prev) => (prev ? { ...prev, circuitOpen: res.open } : prev))
     })
 
+  const onSaveImageQuota = () =>
+    withAction(async () => {
+      const parse = (raw: string, label: string): number | null => {
+        if (!/^\d+$/.test(raw.trim())) {
+          setError(`${label} 须为非负整数`)
+          return null
+        }
+        return Number.parseInt(raw.trim(), 10)
+      }
+      const userQ = parse(imageUserQuota, '普通用户日额度')
+      const vipQ = parse(imageVipQuota, 'VIP 日额度')
+      const globalQ = parse(imageGlobalCap, '全站日上限')
+      if (userQ == null || vipQ == null || globalQ == null) return
+      const res = await setImageQuotaConfig({
+        imageDailyQuotaUser: userQ,
+        imageDailyQuotaVip: vipQ,
+        imageGlobalDailyCap: globalQ,
+        imageEditEnabled,
+      })
+      setImageUserQuota(String(res.imageDailyQuotaUser))
+      setImageVipQuota(String(res.imageDailyQuotaVip))
+      setImageGlobalCap(String(res.imageGlobalDailyCap))
+      setImageEditEnabled(res.imageEditEnabled)
+      setNote(res.message ?? '出图配额已更新')
+      setSummary((prev) =>
+        prev
+          ? {
+              ...prev,
+              defaultDailyQuota: res.imageDailyQuotaUser,
+              imageDailyQuotaUser: res.imageDailyQuotaUser,
+              imageDailyQuotaVip: res.imageDailyQuotaVip,
+              imageGlobalDailyCap: res.imageGlobalDailyCap,
+              imageEditEnabled: res.imageEditEnabled,
+              global: {
+                ...prev.global,
+                limit: res.imageGlobalDailyCap,
+                remaining: Math.max(0, res.imageGlobalDailyCap - prev.global.used),
+              },
+            }
+          : prev,
+      )
+    })
+
   const onSaveAllowlist = () =>
     withAction(async () => {
       const domains = allowlistText
@@ -357,12 +411,24 @@ export default function AdminPage({ onBack, sessionUser, onNeedLogin }: AdminPag
                   </span>
                 </div>
                 <div className="admin-stat">
-                  <span className="admin-stat-label">默认日配额</span>
-                  <span className="admin-stat-value">{summary.defaultDailyQuota}</span>
+                  <span className="admin-stat-label">普通用户日额度</span>
+                  <span className="admin-stat-value">
+                    {summary.imageDailyQuotaUser ?? summary.defaultDailyQuota}
+                  </span>
+                </div>
+                <div className="admin-stat">
+                  <span className="admin-stat-label">VIP 日额度</span>
+                  <span className="admin-stat-value">{summary.imageDailyQuotaVip ?? 20}</span>
                 </div>
                 <div className="admin-stat">
                   <span className="admin-stat-label">关联上限</span>
                   <span className="admin-stat-value">{summary.associateLimit}</span>
+                </div>
+                <div className="admin-stat">
+                  <span className="admin-stat-label">AI 出图</span>
+                  <span className="admin-stat-value">
+                    {summary.imageEditEnabled === false ? '关闭' : '开启'}
+                  </span>
                 </div>
                 <div className="admin-stat">
                   <span className="admin-stat-label">熔断</span>
@@ -425,6 +491,70 @@ export default function AdminPage({ onBack, sessionUser, onNeedLogin }: AdminPag
           ) : (
             <p className="admin-empty">暂无汇总数据</p>
           )}
+        </section>
+
+        <section className="admin-card">
+          <h2>AI 出图配额</h2>
+          <p className="admin-muted">
+            按成功返回的图片张数计费。管理员/超管个人不限；用户覆盖配额仍在用户表设置。
+          </p>
+          <div className="admin-row">
+            <div className="admin-field">
+              <label htmlFor="admin-img-user">普通用户日额度</label>
+              <input
+                id="admin-img-user"
+                type="number"
+                min={0}
+                step={1}
+                value={imageUserQuota}
+                disabled={busy}
+                onChange={(e) => setImageUserQuota(e.target.value)}
+              />
+            </div>
+            <div className="admin-field">
+              <label htmlFor="admin-img-vip">VIP 日额度</label>
+              <input
+                id="admin-img-vip"
+                type="number"
+                min={0}
+                step={1}
+                value={imageVipQuota}
+                disabled={busy}
+                onChange={(e) => setImageVipQuota(e.target.value)}
+              />
+            </div>
+            <div className="admin-field">
+              <label htmlFor="admin-img-global">全站日上限</label>
+              <input
+                id="admin-img-global"
+                type="number"
+                min={0}
+                step={1}
+                value={imageGlobalCap}
+                disabled={busy}
+                onChange={(e) => setImageGlobalCap(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="admin-row admin-mt">
+            <label className="admin-muted" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <input
+                type="checkbox"
+                checked={imageEditEnabled}
+                disabled={busy}
+                onChange={(e) => setImageEditEnabled(e.target.checked)}
+              />
+              启用 AI 出图
+            </label>
+            <button
+              type="button"
+              className="admin-btn admin-btn-primary"
+              disabled={busy}
+              onClick={() => void onSaveImageQuota()}
+            >
+              保存出图配额
+            </button>
+          </div>
         </section>
 
         <section className="admin-card">

@@ -1,0 +1,156 @@
+/* Optional AI 优化 panel on bead tab */
+
+.bead-ai-block {
+  display: grid;
+  gap: 10px;
+}
+
+.bead-ai-trigger {
+  width: 100%;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid #1d574b;
+  background: linear-gradient(180deg, #e8f5f1 0%, #d7efe8 100%);
+  color: #145044;
+  font-size: 13px;
+  font-weight: 750;
+  cursor: pointer;
+  border-radius: 2px;
+}
+
+.bead-ai-trigger.pulse {
+  animation: bead-ai-pulse 2.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bead-ai-trigger.pulse {
+    animation: none;
+  }
+}
+
+@keyframes bead-ai-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(29, 87, 75, 0.28);
+  }
+  50% {
+    box-shadow: 0 0 0 5px rgba(29, 87, 75, 0);
+  }
+}
+
+.bead-ai-privacy {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.45;
+  color: #6d7571;
+}
+
+.bead-ai-panel {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid #d7dcd7;
+  background: #f9faf8;
+}
+
+.bead-ai-panel-title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.bead-ai-field {
+  display: grid;
+  gap: 4px;
+}
+
+.bead-ai-field label {
+  font-size: 11px;
+  font-weight: 650;
+  color: #6d7571;
+}
+
+.bead-ai-field input,
+.bead-ai-field select {
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid #d7dcd7;
+  background: #fff;
+  font-size: 13px;
+}
+
+.bead-ai-quota {
+  margin: 0;
+  font-size: 12px;
+  color: #3d4a45;
+}
+
+.bead-ai-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.bead-ai-actions button {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid #d7dcd7;
+  background: #f6f7f5;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.bead-ai-actions button.primary {
+  border-color: #1d574b;
+  background: #1d574b;
+  color: #fff;
+}
+
+.bead-ai-actions button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.bead-ai-error {
+  margin: 0;
+  font-size: 12px;
+  color: #9c3129;
+  line-height: 1.4;
+}
+
+.bead-ai-results {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.bead-ai-card {
+  position: relative;
+  display: grid;
+  gap: 6px;
+  padding: 6px;
+  border: 2px solid #d7dcd7;
+  background: #fff;
+  cursor: pointer;
+  text-align: left;
+}
+
+.bead-ai-card.selected {
+  border-color: #1d574b;
+  box-shadow: 0 0 0 1px #1d574b inset;
+}
+
+.bead-ai-card img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: contain;
+  background: #f0f2ef;
+  display: block;
+}
+
+.bead-ai-card span {
+  font-size: 11px;
+  font-weight: 650;
+  color: #3d4a45;
+}

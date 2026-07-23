@@ -216,6 +216,7 @@ npx wrangler d1 execute pindou-helper-db --remote --command \
 - [ ] 未验证 → `403 email_unverified`  
 - [ ] 验证后 ping 成功并扣次；超额 → `429 user_quota`  
 - [ ] 管理页打开熔断 → `503 circuit_open`  
+- [ ] AI 出图：见 `docs/deploy-ai-image.md`（`AI_IMAGE_*`、`POST /api/ai/image-edit`、按张计费）  
 
 ### 管理端
 
@@ -247,7 +248,7 @@ npm run dev
 
 - Cloudflare **Free** 可起步，但非无限：Workers 请求/日、D1 读写/日、**KV 写极少（本方案计数走 D1，勿改回 KV 狂写）**。  
 - 密码 PBKDF2 在 Free **10ms CPU** 上可能吃紧 → **生产建议 Workers Paid（约 $5/月起）**。  
-- **真正要防打爆的是上游 AI API 账单**：全局日熔断 + 每账号 3 次/日；上线前在管理页确认熔断与全局上限配置。  
+- **真正要防打爆的是上游 AI API 账单**：全局日熔断 + 角色日额度（普通 6 / VIP 20 张图）+ 全站 cap；上线前在管理页确认熔断与出图配额。  
 - Resend 本身按套餐计费，与 CF 分开。
 
 ---
@@ -267,6 +268,8 @@ npm run dev
 |------|------|
 | `wrangler.jsonc` | Worker + D1 binding |
 | `migrations/0001_auth_session.sql` | Schema + 默认配置种子 |
+| `migrations/0002_image_edit_quota.sql` | AI 出图配额种子 |
+| `docs/deploy-ai-image.md` | Wisart env + 出图验收 |
 | `worker/auth/mail.ts` | Resend / dev 日志发信 |
 | `worker/index.ts` | `Env` 字段说明 |
 | `.trellis/tasks/07-22-user-auth-ai-cost/design.md` | 完整设计 |

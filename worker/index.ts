@@ -10,6 +10,7 @@ import {
   handleVerify,
   type AuthWorkerEnv,
 } from './auth/handlers'
+import { handleAiImageEdit } from './ai/imageEdit'
 import { handleAiPing } from './guard/handlers'
 import { parseNote } from './xhs/handlers'
 import { proxyImage } from './xhs/proxy'
@@ -39,6 +40,12 @@ export interface Env extends AuthWorkerEnv {
    * Workers Paid recommended for production auth.
    */
   PASSWORD_PBKDF2_ITERATIONS?: string
+  /** Wisart-compatible image edits — Worker runtime only, never VITE_*. */
+  AI_IMAGE_API_KEY?: string
+  AI_IMAGE_BASE_URL?: string
+  AI_IMAGE_MODEL?: string
+  AI_IMAGE_SIZE?: string
+  AI_IMAGE_PROMPT_TEMPLATE?: string
 }
 
 function apiNotFound(): Response {
@@ -127,9 +134,12 @@ export default {
       return routeAuth(request, env, 'GET', handleMe)
     }
 
-    // AI routes (guarded; Phase 1 stub provider)
+    // AI routes (guarded). Ping is ops-only stub; image-edit is product path.
     if (url.pathname === '/api/ai/ping') {
       return routeAuth(request, env, 'POST', handleAiPing)
+    }
+    if (url.pathname === '/api/ai/image-edit') {
+      return routeAuth(request, env, 'POST', handleAiImageEdit)
     }
 
     // Mini admin (role gate inside handlers)

@@ -2,8 +2,14 @@
 
 const DEFAULTS: Record<string, string> = {
   email_domain_allowlist: '["qq.com","gmail.com","frankiehu.top"]',
-  default_daily_quota: '3',
+  /** @deprecated Prefer image_daily_quota_user; kept for older admin UIs. */
+  default_daily_quota: '6',
+  image_daily_quota_user: '6',
+  image_daily_quota_vip: '20',
+  image_global_daily_cap: '500',
+  image_edit_enabled: 'true',
   ip_fp_daily_cap: '10',
+  /** @deprecated Prefer image_global_daily_cap. */
   global_daily_cap: '500',
   circuit_open: 'false',
   register_ip_daily_cap: '3',
