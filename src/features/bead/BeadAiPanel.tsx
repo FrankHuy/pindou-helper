@@ -1,6 +1,7 @@
 /**
  * Optional AI 优化 pre-step for bead tab.
  * Default path remains local; this only runs after explicit user submit.
+ * After generation, original + all candidates stay available for switching.
  */
 
 import { useEffect, useRef, useState } from 'react'
@@ -22,7 +23,9 @@ type BeadAiPanelProps = {
   onApplyFile: (file: File) => void
 }
 
-type Candidate = BeadAiImage & { objectUrl: string }
+type Candidate = BeadAiImage & { objectUrl: string; file?: File }
+
+type ActiveKey = 'original' | number
 
 export default function BeadAiPanel({
   file,
@@ -37,37 +40,62 @@ export default function BeadAiPanel({
   const [error, setError] = useState('')
   const [quotaHint, setQuotaHint] = useState<string | null>(null)
   const [candidates, setCandidates] = useState<Candidate[]>([])
-  const [selected, setSelected] = useState<number | null>(null)
+  const [original, setOriginal] = useState<{ file: File; objectUrl: string } | null>(null)
+  const [activeKey, setActiveKey] = useState<ActiveKey>('original')
   const inflightRef = useRef(false)
+  /** When true, next `file` prop change is from our own apply — do not wipe gallery. */
+  const skipFileResetRef = useRef(false)
   const objectUrlsRef = useRef<string[]>([])
+  const originalUrlRef = useRef<string | null>(null)
 
-  const revokeCandidates = () => {
+  const revokeCandidateUrls = () => {
     for (const url of objectUrlsRef.current) URL.revokeObjectURL(url)
     objectUrlsRef.current = []
-    setCandidates([])
-    setSelected(null)
+  }
+
+  const revokeOriginalUrl = () => {
+    if (originalUrlRef.current) {
+      URL.revokeObjectURL(originalUrlRef.current)
+      originalUrlRef.current = null
+    }
   }
 
   useEffect(
     () => () => {
-      for (const url of objectUrlsRef.current) URL.revokeObjectURL(url)
+      revokeCandidateUrls()
+      revokeOriginalUrl()
     },
     [],
   )
 
-  // Reset panel when source file changes from outside.
+  // External source change (user upload): reset AI session and adopt as original.
+  // Apply-from-gallery sets skipFileResetRef so candidates stay.
   useEffect(() => {
+    if (skipFileResetRef.current) {
+      skipFileResetRef.current = false
+      return
+    }
+
     setOpen(false)
     setError('')
     setBusy(false)
     inflightRef.current = false
-    for (const url of objectUrlsRef.current) URL.revokeObjectURL(url)
-    objectUrlsRef.current = []
+    revokeCandidateUrls()
     setCandidates([])
-    setSelected(null)
+    revokeOriginalUrl()
+
+    if (file) {
+      const objectUrl = URL.createObjectURL(file)
+      originalUrlRef.current = objectUrl
+      setOriginal({ file, objectUrl })
+      setActiveKey('original')
+    } else {
+      setOriginal(null)
+      setActiveKey('original')
+    }
   }, [file])
 
-  if (!file) return null
+  if (!file && !original) return null
 
   const refreshQuotaHint = async () => {
     try {
@@ -102,8 +130,41 @@ export default function BeadAiPanel({
     void refreshQuotaHint()
   }
 
+  const applySource = (nextFile: File, key: ActiveKey) => {
+    skipFileResetRef.current = true
+    setActiveKey(key)
+    onApplyFile(nextFile)
+  }
+
+  const selectOriginal = () => {
+    if (!original || busy) return
+    applySource(original.file, 'original')
+  }
+
+  const selectCandidate = async (index: number) => {
+    const pick = candidates.find((c) => c.index === index)
+    if (!pick || busy) return
+    setBusy(true)
+    setError('')
+    try {
+      let nextFile = pick.file
+      if (!nextFile) {
+        nextFile = await beadAiImageToFile(pick, `ai-candidate-${pick.index}.png`)
+        setCandidates((list) =>
+          list.map((c) => (c.index === pick.index ? { ...c, file: nextFile } : c)),
+        )
+      }
+      applySource(nextFile, pick.index)
+    } catch {
+      setError('切换图片失败')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   const submit = async () => {
-    if (!file || inflightRef.current || busy) return
+    const sourceFile = original?.file ?? file
+    if (!sourceFile || inflightRef.current || busy) return
     if (!sessionUser) {
       onLogin()
       return
@@ -112,11 +173,14 @@ export default function BeadAiPanel({
     inflightRef.current = true
     setBusy(true)
     setError('')
-    revokeCandidates()
+    // New generation replaces previous candidates only (original kept).
+    revokeCandidateUrls()
+    setCandidates([])
 
     try {
+      // Always edit from original upload when available, not from last AI pick.
       const result = await requestBeadAiImageEdit({
-        file,
+        file: sourceFile,
         style: style.trim() || 'chibi',
         n,
       })
@@ -126,13 +190,21 @@ export default function BeadAiPanel({
         return { ...img, objectUrl }
       })
       setCandidates(next)
-      setSelected(next[0]?.index ?? null)
+      setOpen(true)
       if (result.remaining.userLimit < 0) {
         setQuotaHint('今日额度：个人不限')
       } else {
         setQuotaHint(
           `本次扣 ${result.charged} 张 · 剩余 ${result.remaining.user}/${result.remaining.userLimit}`,
         )
+      }
+      // Auto-select first candidate into pipeline but keep gallery.
+      if (next[0]) {
+        const firstFile = await beadAiImageToFile(next[0], `ai-candidate-${next[0].index}.png`)
+        setCandidates((list) =>
+          list.map((c) => (c.index === next[0].index ? { ...c, file: firstFile } : c)),
+        )
+        applySource(firstFile, next[0].index)
       }
     } catch (err) {
       if (err instanceof AuthRequestError) {
@@ -151,22 +223,7 @@ export default function BeadAiPanel({
     }
   }
 
-  const applySelected = async () => {
-    const pick = candidates.find((c) => c.index === selected)
-    if (!pick || busy) return
-    setBusy(true)
-    setError('')
-    try {
-      const nextFile = await beadAiImageToFile(pick, 'ai-optimized.png')
-      onApplyFile(nextFile)
-      setOpen(false)
-      revokeCandidates()
-    } catch {
-      setError('应用图片失败')
-    } finally {
-      setBusy(false)
-    }
-  }
+  const hasGallery = Boolean(original && (candidates.length > 0 || activeKey !== 'original'))
 
   return (
     <div className="control-group bead-ai-block">
@@ -186,9 +243,9 @@ export default function BeadAiPanel({
         </>
       ) : (
         <div className="bead-ai-panel">
-          <p className="bead-ai-panel-title">生成候选图后选用一张</p>
+          <p className="bead-ai-panel-title">生成候选图后可随时切换对比</p>
           <p className="bead-ai-privacy">
-            图片将上传至服务器并转发至第三方图像服务；按成功返回的张数扣减当日额度。
+            图片将上传至服务器并转发至第三方图像服务；按成功返回的张数扣减当日额度。再次提交会替换候选图，原图会保留。
           </p>
           <div className="bead-ai-field">
             <label htmlFor="bead-ai-style">画风（最多 10 字，默认 chibi）</label>
@@ -234,46 +291,62 @@ export default function BeadAiPanel({
               onClick={() => {
                 setOpen(false)
                 setError('')
-                revokeCandidates()
+                // Keep candidates + original for switching even when form collapsed.
               }}
             >
-              关闭
+              收起面板
             </button>
-            {candidates.length > 0 && (
-              <button
-                type="button"
-                className="primary"
-                disabled={busy || selected == null}
-                onClick={() => void applySelected()}
-              >
-                使用此图
-              </button>
-            )}
           </div>
           {error && (
             <p className="bead-ai-error" role="alert">
               {error}
             </p>
           )}
-          {candidates.length > 0 && (
-            <div className="bead-ai-results" role="listbox" aria-label="AI 候选图">
-              {candidates.map((c) => (
-                <button
-                  key={c.index}
-                  type="button"
-                  role="option"
-                  aria-selected={selected === c.index}
-                  className={`bead-ai-card${selected === c.index ? ' selected' : ''}`}
-                  onClick={() => setSelected(c.index)}
-                  disabled={busy}
-                >
-                  <img src={c.objectUrl} alt={`候选 ${c.index}`} />
-                  <span>候选 {c.index}</span>
-                </button>
-              ))}
-            </div>
-          )}
         </div>
+      )}
+
+      {/* Persistent gallery: original + AI results; click to drive bead pipeline */}
+      {original && candidates.length > 0 && (
+        <div className="bead-ai-gallery" role="listbox" aria-label="原图与 AI 候选，点击切换">
+          <p className="bead-ai-gallery-title">源图切换（原图与候选均保留）</p>
+          <div className="bead-ai-results">
+            <button
+              type="button"
+              role="option"
+              aria-selected={activeKey === 'original'}
+              className={`bead-ai-card${activeKey === 'original' ? ' selected' : ''}`}
+              onClick={selectOriginal}
+              disabled={busy}
+            >
+              <img src={original.objectUrl} alt="上传原图" />
+              <span>原图</span>
+            </button>
+            {candidates.map((c) => (
+              <button
+                key={c.index}
+                type="button"
+                role="option"
+                aria-selected={activeKey === c.index}
+                className={`bead-ai-card${activeKey === c.index ? ' selected' : ''}`}
+                onClick={() => void selectCandidate(c.index)}
+                disabled={busy}
+              >
+                <img src={c.objectUrl} alt={`候选 ${c.index}`} />
+                <span>候选 {c.index}</span>
+              </button>
+            ))}
+          </div>
+          <p className="bead-ai-gallery-hint">
+            点击缩略图切换当前用于拼豆的源图，可反复对比；不会丢掉其它图。
+          </p>
+        </div>
+      )}
+
+      {!open && hasGallery && candidates.length === 0 ? null : null}
+      {!open && candidates.length > 0 && (
+        <button type="button" className="bead-ai-reopen" onClick={openPanel}>
+          继续 AI 设置
+        </button>
       )}
     </div>
   )

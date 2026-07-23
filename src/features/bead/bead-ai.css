@@ -154,3 +154,35 @@
   font-weight: 650;
   color: #3d4a45;
 }
+
+.bead-ai-gallery {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid #d7dcd7;
+  background: #f4f7f5;
+}
+
+.bead-ai-gallery-title {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 750;
+  color: #145044;
+}
+
+.bead-ai-gallery-hint {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.4;
+  color: #6d7571;
+}
+
+.bead-ai-reopen {
+  min-height: 32px;
+  border: 1px dashed #1d574b;
+  background: #fff;
+  color: #145044;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+}
