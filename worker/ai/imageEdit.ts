@@ -155,17 +155,13 @@ export async function handleAiImageEdit(
   request: Request,
   env: ImageEditEnv,
 ): Promise<Response> {
-  const apiKey = env.AI_IMAGE_API_KEY?.trim()
+  const platformKey = env.AI_IMAGE_API_KEY?.trim() || ''
   const baseUrl = (env.AI_IMAGE_BASE_URL?.trim() || 'https://wisart.kuaileshifu.com').replace(
     /\/+$/,
     '',
   )
   const model = env.AI_IMAGE_MODEL?.trim() || 'gpt-image-2'
   const size = env.AI_IMAGE_SIZE?.trim() || '1024x1024'
-
-  if (!apiKey) {
-    return jsonError(503, 'not_configured', 'AI 出图服务未配置')
-  }
 
   const editEnabled = await getConfigBool(env.DB, 'image_edit_enabled', true)
   if (!editEnabled) {
@@ -177,6 +173,22 @@ export async function handleAiImageEdit(
     form = await request.formData()
   } catch {
     return jsonError(400, 'invalid_request', '请以 multipart 上传图片')
+  }
+
+  // Optional one-shot user key (form only; never logged / never stored).
+  const userKeyRaw =
+    form.get('api_key') ?? form.get('apiKey') ?? form.get('userApiKey') ?? form.get('user_api_key')
+  const userApiKey =
+    typeof userKeyRaw === 'string' && userKeyRaw.trim() ? userKeyRaw.trim() : ''
+  const useUserKey = Boolean(userApiKey)
+  const apiKey = useUserKey ? userApiKey : platformKey
+
+  if (!apiKey) {
+    return jsonError(
+      503,
+      'not_configured',
+      'AI 出图服务未配置，或请临时填写你自己的 API Key',
+    )
   }
 
   const styleResult = normalizeStyle(form.get('style'))
@@ -214,7 +226,11 @@ export async function handleAiImageEdit(
     bodyForFp.fingerprint = fpField.trim()
   }
 
-  const access = await requireAiAccess(env.DB, request, bodyForFp, { units: n })
+  // User key: still require login/verify/circuit; skip platform image quotas.
+  const access = await requireAiAccess(env.DB, request, bodyForFp, {
+    units: n,
+    skipQuota: useUserKey,
+  })
   if (!access.ok) return access.response
 
   const prompt = assembleImageEditPrompt(style, resolvePromptTemplate(env))
@@ -297,13 +313,16 @@ export async function handleAiImageEdit(
     return jsonError(502, 'result_fetch_failed', '生成结果拉取失败，未扣费')
   }
 
-  const charged = images.length
-  const remainingQuota = await deductAiUsage(env.DB, access.ctx, charged)
+  const charged = useUserKey ? 0 : images.length
+  const remainingQuota = useUserKey
+    ? access.ctx.quota
+    : await deductAiUsage(env.DB, access.ctx, charged)
   const remaining = remainingFromSnapshot(remainingQuota)
 
   return jsonOk({
     ok: true,
     charged,
+    usedUserApiKey: useUserKey,
     remaining: {
       user: remaining.user,
       userLimit: remaining.userLimit,

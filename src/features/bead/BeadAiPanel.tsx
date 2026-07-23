@@ -36,6 +36,8 @@ export default function BeadAiPanel({
   const [open, setOpen] = useState(false)
   const [style, setStyle] = useState('chibi')
   const [n, setN] = useState(1)
+  /** Session-only; never written to localStorage / user profile. */
+  const [userApiKey, setUserApiKey] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [quotaHint, setQuotaHint] = useState<string | null>(null)
@@ -183,6 +185,7 @@ export default function BeadAiPanel({
         file: sourceFile,
         style: style.trim() || 'chibi',
         n,
+        apiKey: userApiKey.trim() || undefined,
       })
       const next: Candidate[] = result.images.map((img) => {
         const objectUrl = beadAiImageToObjectUrl(img)
@@ -191,7 +194,9 @@ export default function BeadAiPanel({
       })
       setCandidates(next)
       setOpen(true)
-      if (result.remaining.userLimit < 0) {
+      if (result.usedUserApiKey) {
+        setQuotaHint('已使用你填写的 API Key · 未扣平台额度')
+      } else if (result.remaining.userLimit < 0) {
         setQuotaHint('今日额度：个人不限')
       } else {
         setQuotaHint(
@@ -274,6 +279,22 @@ export default function BeadAiPanel({
                 </option>
               ))}
             </select>
+          </div>
+          <div className="bead-ai-field">
+            <label htmlFor="bead-ai-user-key">我的 API Key（可选，临时）</label>
+            <input
+              id="bead-ai-user-key"
+              type="password"
+              autoComplete="off"
+              value={userApiKey}
+              disabled={busy}
+              placeholder="留空则使用平台额度"
+              onChange={(e) => setUserApiKey(e.target.value)}
+              spellCheck={false}
+            />
+            <p className="bead-ai-key-hint">
+              填写后走你自己的上游额度，不扣本站张数；仅本次会话保存在页面，不会写入账号配置。
+            </p>
           </div>
           {quotaHint && <p className="bead-ai-quota">{quotaHint}</p>}
           <div className="bead-ai-actions">

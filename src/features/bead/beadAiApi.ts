@@ -19,6 +19,8 @@ export type BeadAiRemaining = {
 export type BeadAiImageEditResponse = {
   ok: true
   charged: number
+  /** True when request used a temporary user-supplied API key (no platform charge). */
+  usedUserApiKey?: boolean
   remaining: BeadAiRemaining
   images: BeadAiImage[]
 }
@@ -44,12 +46,16 @@ export async function requestBeadAiImageEdit(input: {
   file: File
   style: string
   n: number
+  /** Optional one-shot key; not persisted. When set, platform quota is not charged. */
+  apiKey?: string
   signal?: AbortSignal
 }): Promise<BeadAiImageEditResponse> {
   const form = new FormData()
   form.append('image', input.file, input.file.name || 'source.png')
   form.append('style', input.style.trim() || 'chibi')
   form.append('n', String(input.n))
+  const userKey = input.apiKey?.trim()
+  if (userKey) form.append('api_key', userKey)
   const fp = getClientFingerprint()
   form.append('fingerprint', fp)
 

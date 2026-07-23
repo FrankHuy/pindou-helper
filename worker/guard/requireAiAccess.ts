@@ -51,6 +51,11 @@ export type AiAccessResult =
 
 export type RequireAiAccessOptions = {
   /**
+   * When true: still require login / verified / not banned / circuit closed,
+   * but skip personal/global/associate quota checks (e.g. user-supplied API key).
+   */
+  skipQuota?: boolean
+  /**
    * Minimum remaining billable units required before calling upstream.
    * Image edit passes `n` (1–4); ping uses default 1.
    */
@@ -179,6 +184,19 @@ export async function requireAiAccess(
     }
   }
 
+  const ip = clientIp(request)
+  const fpRaw = readClientFp(request, body)
+  const fpHash = fpRaw ? await sha256Base64Url(fpRaw) : null
+
+  // User-provided upstream key: still require identity + circuit, skip platform quotas.
+  if (options?.skipQuota) {
+    const quota = await buildQuotaSnapshot(db, user, { ip, fpHash })
+    return {
+      ok: true,
+      ctx: { user, ip, fpHash, day, quota },
+    }
+  }
+
   const { userQuota, vipQuota, globalLimit, associateLimit } = await loadRoleQuotaConfig(db)
 
   const globalCheck = await hasRemainingUnits(db, 'global', 'global', globalLimit, units, day)
@@ -205,7 +223,6 @@ export async function requireAiAccess(
     }
   }
 
-  const ip = clientIp(request)
   // Associate caps are per-request style limits; still require remaining ≥ units.
   const ipCheck = await hasRemainingUnits(db, 'ip', ip, associateLimit, units, day)
   if (!ipCheck.ok) {
@@ -216,8 +233,6 @@ export async function requireAiAccess(
     }
   }
 
-  const fpRaw = readClientFp(request, body)
-  const fpHash = fpRaw ? await sha256Base64Url(fpRaw) : null
   // Missing fingerprint: still enforce IP associate cap (already done). Soft signal only.
   if (fpHash) {
     const fpCheck = await hasRemainingUnits(db, 'fp', fpHash, associateLimit, units, day)

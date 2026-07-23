@@ -85,6 +85,13 @@
   color: #3d4a45;
 }
 
+.bead-ai-key-hint {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.4;
+  color: #6d7571;
+}
+
 .bead-ai-actions {
   display: flex;
   flex-wrap: wrap;
