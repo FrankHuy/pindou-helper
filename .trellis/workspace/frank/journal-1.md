@@ -384,3 +384,36 @@ Closed 00-bootstrap-guidelines: frontend specs already filled from real code; re
 ### Next Steps
 
 - None - task complete
+
+
+## Session 12: 拼豆图纸AI优化出图
+
+**Date**: 2026-07-23
+**Task**: 拼豆图纸AI优化出图
+**Branch**: `main`
+
+### Summary
+
+Implemented optional bead AI optimize: POST /api/ai/image-edit (single edits, base64 results), role image quotas 6/20/unlimited admin, hide AI ping for non-super, admin image-quota config, privacy + deploy-ai-image docs. Pushed 8065f9f.
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `8065f9f` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
