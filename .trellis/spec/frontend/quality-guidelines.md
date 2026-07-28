@@ -41,6 +41,9 @@ Prefer pure-frontend algorithms; **no new runtime deps** unless task-approved.
 - PNG export and PWA wiring must keep working after generation changes
 - XHS UI images only via same-origin `proxyPath`
 - Feature CSS co-located; shell styles in `App.css`
+- Inventory API client uses `credentials: include` (session cookie); login gate CTA when unauthenticated
+- Inventory: grams ↔ beads conversion (`Math.round(value * 100)` for grams→beads); server and client validate non-negative integers
+- Inventory: sparse D1 rows (no full palette prefill); `touched` flag marks entered/used codes for low-stock filtering
 
 ---
 
@@ -76,6 +79,10 @@ Prefer pure-frontend algorithms; **no new runtime deps** unless task-approved.
 6. Mail: `RESEND_API_KEY` + `MAIL_FROM` runtime; public mail diagnostics at most `hasResendApiKey` / `hasMailFrom` (never key value)
 7. Admin: role checks on Worker; same-origin for mutating `/api/admin/*`
 8. JSON errors: `{ error: code, message: '中文…' }`
+9. Inventory: **login required, email verification NOT required** (gate stays on AI edit only)
+10. Inventory: deduct **clamps to 0** (never negative); shortage is informational, not 409
+11. Inventory: every mutation writes a ledger row inside the **same D1 batch** as the balance change (atomic)
+12. Inventory: only color codes and quantities transmitted — **no sheet images uploaded**'
 
 ---
 
@@ -102,8 +109,12 @@ No unit test runner mandated yet. Minimum gates:
 - [ ] `resolvePalette` layer order preserved
 - [ ] `createPattern` uses `PatternOptions`; matching via `color-match`
 - [ ] Debounce + generation token for bead generate
-- [ ] Disclaimer visible on color panels (bead + workshop)
-- [ ] Bead/workshop keep-alive `is-hidden` when required
+- [ ] Disclaimer visible on color panels (bead + workshop + inventory)
+- [ ] Bead/workshop/inventory keep-alive `is-hidden` when required
 - [ ] No new dependencies without task approval
 - [ ] XHS: proxy paths only; allowlists intact; Turnstile secret not in client
 - [ ] Privacy page still free of XHS product language
+- [ ] Inventory: login required, email verification NOT required
+- [ ] Inventory: deduct clamps to 0; ledger written atomically with balance change
+- [ ] Inventory: no sheet images uploaded; only codes + quantities
+- [ ] Inventory: all UI text in Chinese; units marked 颗 or g

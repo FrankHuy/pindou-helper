@@ -23,11 +23,25 @@ Derived palette resolution uses `useMemo`. Bead generation reads a **latest-para
 
 ```ts
 type ShellPage = 'app' | 'privacy' | 'about'
-type AppTab = 'bead' | 'workshop' | 'xhs'
+type AppTab = 'bead' | 'workshop' | 'xhs' | 'inventory'
 ```
 
 - `shellPage` ↔ `location.pathname` (`shellPageFromPath`, `navigateShell` + `pushState` / `popstate`)
-- `tab` switches feature panels; bead + workshop **keep-alive** via CSS hide
+- `tab` switches feature panels; bead + workshop + inventory **keep-alive** via CSS hide
+
+### Inventory state (owned by App shell)
+
+```ts
+const [inventory, setInventory] = useState<InventorySnapshot | null>(null)
+const [inventoryLoading, setInventoryLoading] = useState(false)
+const [inventoryError, setInventoryError] = useState('')
+```
+
+- Fetched via `fetchInventory()` when `sessionUser` becomes available.
+- Cleared on logout (`sessionUser === null`).
+- After mutations (entries, correction, settings, deduct), parent calls `onMutated(snapshot)` to replace state.
+- Passed as props to `InventoryTab` and `BeadWorkshopTab` (for start/finish).
+- No global store; shell owns cloud-backed state and passes props.
 
 ---
 
@@ -87,6 +101,28 @@ Analyze on upload settle and split **pointerup** / 「重新识别」 — not ev
 | `result` | Parse payload with `proxyPath` images |
 | `turnstileToken` + ref | Widget token for parse body |
 | `parseGenRef` + `AbortController` | Cancel superseded parse |
+
+### Inventory tab state (summary)
+
+| Field | Role |
+|------|-------|
+| `range`, `merchantPack` | Palette scope for spreadsheet grid |
+| `unit` | `'bead' \| 'gram'` for entry |
+| `drafts` | `Record<code, string>` — draft entry inputs |
+| `corrections` | `Record<code, string>` — single-code set inputs |
+| `thresholdInput` | Low-stock threshold settings input |
+| `filterLowStock`, `filterSeries` | Correction list filters |
+| `ledgerOpen`, `ledgerEntries`, `ledgerCursor` | Ledger collapsible + cursor pagination |
+
+### Workshop inventory state (summary)
+
+| Field | Role |
+|------|-------|
+| `activeSession` | Locked `InventoryUsageSnapshot` during active workshop |
+| `shortageItems` | Codes where balance < needed (warning-only) |
+| `deductResult` | `DeductResponse` after finish (shortages + updated inventory) |
+| `deductLowStock` | `LowStockItem[]` computed from deduct response |
+| `inventoryBusy` | Disable buttons during API calls |
 
 ---
 

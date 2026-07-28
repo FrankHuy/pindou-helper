@@ -25,13 +25,13 @@ Default export function components. Chinese user-facing copy. Prefer plain butto
 Owns:
 
 - `ShellPage`: `'app' | 'privacy' | 'about' | 'admin' | auth pages` synced with `/`, `/privacy`, `/about`, `/admin`, `/login`… via `history.pushState` + `popstate` (no react-router)
-- `AppTab`: `'bead' | 'workshop' | 'xhs'`
+- `AppTab`: `'bead' | 'workshop' | 'xhs' | 'inventory'`
 - Bead generation state and canvas (large local state tree)
 - Footer links → Privacy / About
 
 Rules:
 
-- **Bead** and **workshop** sections stay **mounted** when inactive: `className={… is-hidden}` + `aria-hidden` so generate / highlight state survives tab switches.
+- **Bead**, **workshop**, and **inventory** sections stay **mounted** when inactive: `className={… is-hidden}` + `aria-hidden` so generate / highlight / draft entry state survives tab switches.
 - **XHS** may mount only when active (`{tab === 'xhs' && <XhsDownloadTab />}`) — network tab; remount is acceptable.
 - Header **upload** is **bead-only**. Workshop and XHS own their inputs.
 - When `shellPage !== 'app'`, render info page layout (back → `navigateShell('app')`); do not require a router package.
@@ -64,7 +64,7 @@ Typical feature tab:
 7. Handlers
 8. JSX: Chinese labels, error banners, primary actions
 
-Props are rare for tabs (shell does not pass bead state down). Info pages take minimal callbacks:
+Props are rare for tabs (shell does not pass bead state down). Info pages take minimal callbacks. **Inventory** and **workshop** receive inventory snapshot + mutators from App shell (session-owned state).
 
 ```ts
 type PrivacyPageProps = { onBack: () => void }

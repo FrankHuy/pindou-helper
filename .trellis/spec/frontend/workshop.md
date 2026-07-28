@@ -89,6 +89,16 @@ const result = await analyzeWorkshopFile(file, MARD_COLORS)
 - Disclaimer **屏幕色仅供参考** on color chips
 - Errors in Chinese: `无法读取图片` / `未识别到可用颜色，请调整分隔线后重试`
 
+### Inventory start/finish integration
+
+- **Start** button appears when `result.colors.some(c => c.count > 0)` and user is logged in.
+- Start builds an `InventoryUsageSnapshot` from `result.colors`, calculates shortages locally (warning-only, never blocks).
+- During active session, a locked snapshot is displayed; re-recognize does **not** change the locked usage — show warning.
+- **Finish** calls `POST /api/inventory/deduct` with the locked snapshot. Server clamps to 0 (never negative); shortage is informational.
+- After finish: show low-stock list (codes below threshold) + shortage reminder from response.
+- Start/end disabled when logged out or no recognition result.
+- Inventory state (snapshot, loading, error) is passed from App shell as props.
+
 ---
 
 ## 7. Common Mistakes

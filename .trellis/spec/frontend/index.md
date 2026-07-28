@@ -13,6 +13,7 @@ Product surfaces:
 3. **小红书下图** — public note parse + image proxy (`features/xhs` + `worker/xhs`)
 4. **账号 / AI 护栏 / 极简管理** — `features/auth`, `features/admin` + `worker/auth|guard|admin|db` (D1)
 5. **Privacy / About** — path shell pages (`features/info`); local tools + optional account/AI (not an XHS deep-dive)
+6. **豆子库存** — account-bound bead inventory: spreadsheet entry, threshold, ledger, workshop start/finish deduct (`features/inventory` + `lib/inventory` + `worker/inventory` + `worker/db`)
 
 Domain algorithms stay in `src/lib/**` (no React). Worker owns `/api/*` only.
 
@@ -61,7 +62,7 @@ Always skim [Quality Guidelines](./quality-guidelines.md) for privacy and depend
 | [State Management](./state-management.md) | Shell / bead / workshop / XHS state | Filled |
 | [Quality Guidelines](./quality-guidelines.md) | Forbidden/required patterns, gates | Filled |
 | [Type Safety](./type-safety.md) | Domain + Worker contracts | Filled |
-| [Workshop](./workshop.md) | Import sheet + highlight pipeline | Filled |
+| [Workshop](./workshop.md) | Import sheet + highlight + inventory start/finish | Filled |
 | [XHS Download](./xhs-download.md) | Worker parse/proxy + tab contracts | Filled |
 
 ---
@@ -82,6 +83,17 @@ Always skim [Quality Guidelines](./quality-guidelines.md) for privacy and depend
 2. **No OCR** — legend swatches → nearest MARD.
 3. **Grid then pixel** — strict gates then mask fallback.
 4. **Keep-alive mount** — preserve highlight/result across tabs.
+5. **Inventory start/finish** — start locks a usage snapshot from `result.colors`; finish deducts via `POST /api/inventory/deduct` (server clamps to 0, never negative); shortage is warning-only, never blocks start.
+
+### Inventory
+
+1. **Cloud D1 authoritative** — balances account-bound; cross-device sync.
+2. **Login-only writes** — email verification NOT required for inventory (stays on AI edit only).
+3. **Sparse rows** — no full 291-row prefill; touched flag marks entered/used codes.
+4. **Atomic ledger** — every mutation writes a ledger row inside the same D1 batch as the balance change.
+5. **Clamp-to-zero deduct** — finish never produces negative balances; shortage gap is returned as informational, not a 409 error.
+6. **Spreadsheet grid** — series letters as rows, numeric suffixes as columns; only codes in the selected palette scope are visible/editable.
+7. **Global per-user threshold** — single low stock threshold (default 100), editable in inventory tab.
 
 ### XHS
 

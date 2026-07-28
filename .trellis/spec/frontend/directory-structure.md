@@ -36,6 +36,10 @@ src/
 │   ├── workshop/           # 拼豆工作间 tab
 │   │   ├── BeadWorkshopTab.tsx
 │   │   └── workshop.css
+│   ├── inventory/          # 豆子库存 tab
+│   │   ├── InventoryTab.tsx
+│   │   ├── inventoryApi.ts
+│   │   └── inventory.css
 │   ├── xhs/                # 小红书下图 tab
 │   │   ├── XhsDownloadTab.tsx
 │   │   ├── xhsApi.ts
@@ -65,6 +69,9 @@ src/
     │   ├── empty.ts
     │   ├── image-data.ts
     │   └── types.ts
+    └── inventory/          # Pure inventory math + types (no React)
+        ├── types.ts
+        └── math.ts
     └── palettes/
         ├── types.ts
         ├── mard-colors.ts
@@ -73,11 +80,12 @@ src/
         └── index.ts
 
 worker/
-├── index.ts                # Routes: /api/config, /api/auth/*, /api/me, /api/admin/*, /api/ai/*, /api/xhs/*
+├── index.ts                # Routes: /api/config, /api/auth/*, /api/me, /api/admin/*, /api/ai/*, /api/xhs/*, /api/inventory/*
 ├── auth/                   # credentials, sessions, verify/reset mail
 ├── admin/                  # mini admin APIs + authz
 ├── guard/                  # AI quota / circuit preflight
-├── db/                     # D1 config + usage_daily helpers
+├── db/                     # D1 config + usage_daily + inventory helpers
+├── inventory/              # Inventory HTTP handlers (session gate, Chinese errors)
 └── xhs/
     ├── handlers.ts
     ├── parse.ts
@@ -115,12 +123,16 @@ public/
 | Auth Worker | `worker/auth/*`, `worker/db/*` | D1 users/sessions; no `src/` imports |
 | Admin UI | `src/features/admin/*` | Mini ops page; hide link unless admin/super; API still enforces |
 | Admin Worker | `worker/admin/*` | `/api/admin/*` role matrix; no `src/` imports |
+| Inventory lib | `src/lib/inventory/*` | Pure types + math (grams, shortages, low-stock, snapshot); no React |
+| Inventory UI + client | `src/features/inventory/*` | Spreadsheet entry, filters, correction, threshold, ledger; same-origin `/api/inventory/*` |
+| Inventory Worker | `worker/inventory/*`, `worker/db/inventory.ts` | D1 helpers + handlers (session gate, clamp-to-zero deduct, atomic ledger) |
 
 ### Import boundaries
 
 ```
 features/xhs  ──► /api/* (network)     ✗ bead lib pattern generate
-features/workshop ──► lib/workshop, color-match, pattern.draw, palettes
+features/inventory ──► lib/inventory, lib/palettes, worker /api/inventory/* (network) ✗ bead lib pattern generate
+features/workshop ──► lib/workshop, color-match, pattern.draw, palettes, inventory types/math/API (for start/finish)
 features/info ──► none of the above domain pipelines
 App.tsx ──► features + lib (orchestration)
 lib/* ──► no React, no features/*
