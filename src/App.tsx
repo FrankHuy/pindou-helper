@@ -11,6 +11,9 @@ import PrivacyPage from './features/info/PrivacyPage'
 import './features/info/info.css'
 import BeadAiPanel from './features/bead/BeadAiPanel'
 import BeadWorkshopTab from './features/workshop/BeadWorkshopTab'
+import InventoryTab from './features/inventory/InventoryTab'
+import type { InventorySnapshot } from './lib/inventory/types'
+import { fetchInventory } from './features/inventory/inventoryApi'
 import XhsDownloadTab from './features/xhs/XhsDownloadTab'
 import {
   ALL_SERIES,
@@ -33,7 +36,7 @@ import type { ImageAdjustments } from './lib/presets'
 const UploadIcon = () => <span aria-hidden="true">+</span>
 const DownloadIcon = () => <span aria-hidden="true">↓</span>
 
-type AppTab = 'bead' | 'workshop' | 'xhs'
+type AppTab = 'bead' | 'workshop' | 'xhs' | 'inventory'
 type ShellPage = 'app' | 'privacy' | 'about' | 'admin' | AuthPageId
 
 const AUTH_PAGES: AuthPageId[] = ['login', 'register', 'forgot', 'reset', 'verify']
@@ -145,6 +148,10 @@ function App() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
+  const [inventory, setInventory] = useState<InventorySnapshot | null>(null)
+  const [inventoryLoading, setInventoryLoading] = useState(false)
+  const [inventoryError, setInventoryError] = useState('')
+
   const [processMode, setProcessMode] = useState<ProcessMode>('photo')
   const [range, setRange] = useState<PaletteRange>('standard')
   const [merchantPack, setMerchantPack] = useState<MerchantPackSize>(null)
@@ -210,6 +217,42 @@ function App() {
 
   const bumpAuth = useCallback(() => {
     setAuthRefresh((n) => n + 1)
+  }, [])
+
+  // --- Inventory: fetch when session available, clear on logout ---
+  useEffect(() => {
+    if (!sessionUser) {
+      setInventory(null)
+      setInventoryError('')
+      return
+    }
+    let cancelled = false
+    setInventoryLoading(true)
+    setInventoryError('')
+    fetchInventory()
+      .then((snapshot) => {
+        if (!cancelled) setInventory(snapshot)
+      })
+      .catch((err) => {
+        if (!cancelled) setInventoryError(err instanceof Error ? err.message : '加载库存失败')
+      })
+      .finally(() => {
+        if (!cancelled) setInventoryLoading(false)
+      })
+    return () => { cancelled = true }
+  }, [sessionUser])
+
+  const handleInventoryRefresh = useCallback(() => {
+    if (!sessionUser) return
+    void fetchInventory()
+      .then(setInventory)
+      .catch((err) => {
+        setInventoryError(err instanceof Error ? err.message : '加载库存失败')
+      })
+  }, [sessionUser])
+
+  const handleInventoryMutated = useCallback((snapshot: InventorySnapshot) => {
+    setInventory(snapshot)
   }, [])
 
   useEffect(() => {
@@ -578,7 +621,9 @@ function App() {
               ? '图片仅在当前设备处理'
               : tab === 'workshop'
                 ? '按色高亮已有图纸'
-                : '公开帖高清图下载'}
+                : tab === 'inventory'
+                  ? '账号绑定库存管理'
+                  : '公开帖高清图下载'}
           </p>
         </div>
         <AuthSessionBar
@@ -611,6 +656,14 @@ function App() {
           aria-current={tab === 'workshop' ? 'page' : undefined}
         >
           拼豆工作间
+        </button>
+        <button
+          type="button"
+          className={`app-tab${tab === 'inventory' ? ' active' : ''}`}
+          onClick={() => setTab('inventory')}
+          aria-current={tab === 'inventory' ? 'page' : undefined}
+        >
+          豆子库存
         </button>
         <button
           type="button"
@@ -1002,7 +1055,28 @@ function App() {
         className={`workshop-host${tab === 'workshop' ? '' : ' is-hidden'}`}
         aria-hidden={tab !== 'workshop'}
       >
-        <BeadWorkshopTab />
+        <BeadWorkshopTab
+          sessionUser={sessionUser}
+          inventory={inventory}
+          onInventoryDeducted={handleInventoryMutated}
+          onLogin={() => navigateShell('login')}
+        />
+      </section>
+
+      {/* Keep inventory mounted so draft entry state survives tab switches. */}
+      <section
+        className={`inventory-host${tab === 'inventory' ? '' : ' is-hidden'}`}
+        aria-hidden={tab !== 'inventory'}
+      >
+        <InventoryTab
+          sessionUser={sessionUser}
+          inventory={inventory}
+          inventoryLoading={inventoryLoading}
+          inventoryError={inventoryError}
+          onLogin={() => navigateShell('login')}
+          onRefresh={handleInventoryRefresh}
+          onMutated={handleInventoryMutated}
+        />
       </section>
 
       {tab === 'xhs' && <XhsDownloadTab />}
