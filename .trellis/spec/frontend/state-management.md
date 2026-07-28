@@ -83,13 +83,17 @@ const generationRef = useRef(0)
 
 | Field | Role |
 |-------|------|
-| `imageData` | Kept after decode even if analyze fails (retry split) |
+| `phase` | `idle \| palette \| recognizing \| uncertain \| done` |
+| `imageData` | Kept after decode even if stages fail (retry split) |
 | `splitRatio` / `splitY` | Auto estimate + user drag |
-| `result` | `WorkshopAnalyzeOutput` (grid or pixel) |
-| `highlightCode` | Single-code dim highlight |
-| `analyzeGenRef` | Discard stale analyze |
+| `candidates` / `confirmedPalette` | Phase 1 editable legend palette |
+| `recognition` / `clusters` / `assignments` | Phase 2–3 uncertain resolution |
+| `result` | Final `WorkshopAnalyzeOutput` only after corrections / skip / no-uncertain |
+| `highlightCode` | Single-code dim highlight on **done** result |
+| `analyzeGenRef` | Discard stale legend extract / recognize |
+| `activeSession` | Locked inventory usage; survives re-recognize |
 
-Analyze on upload settle and split **pointerup** / 「重新识别」 — not every `pointermove`.
+Upload / split **pointerup** / 「重新识别」 → Phase 1 legend extract only — not every `pointermove`, and not auto Phase 2. Inventory start uses final `result` at `phase === 'done'`; keep inventory UI if `activeSession` or `deductResult` while re-confirming palette.
 
 ---
 
