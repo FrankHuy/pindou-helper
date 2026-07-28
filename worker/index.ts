@@ -10,6 +10,14 @@ import {
   handleVerify,
   type AuthWorkerEnv,
 } from './auth/handlers'
+import {
+  handleAddEntries,
+  handleDeduct,
+  handleGetInventory,
+  handleGetLedger,
+  handleSetQuantity,
+  handleUpdateSettings,
+} from './inventory/handlers'
 import { handleAiImageEdit } from './ai/imageEdit'
 import { handleAiPing } from './guard/handlers'
 import { parseNote } from './xhs/handlers'
@@ -50,6 +58,10 @@ export interface Env extends AuthWorkerEnv {
 
 function apiNotFound(): Response {
   return Response.json({ error: 'not_found', message: '接口不存在' }, { status: 404 })
+}
+
+function jsonServerError(): Response {
+  return Response.json({ error: 'server_error', message: '数据库未配置' }, { status: 500 })
 }
 
 function methodNotAllowed(): Response {
@@ -146,6 +158,45 @@ export default {
     if (url.pathname.startsWith('/api/admin')) {
       const adminResponse = await routeAdmin(request, env, url.pathname)
       if (adminResponse) return adminResponse
+    }
+
+    // Inventory routes (session-gated inside handlers)
+    if (url.pathname === '/api/inventory') {
+      if (request.method === 'OPTIONS') return options('GET')
+      if (request.method !== 'GET') return methodNotAllowed()
+      if (!env.DB) return jsonServerError()
+      return handleGetInventory(request, env)
+    }
+    if (url.pathname === '/api/inventory/entries') {
+      if (request.method === 'OPTIONS') return options('POST')
+      if (request.method !== 'POST') return methodNotAllowed()
+      if (!env.DB) return jsonServerError()
+      return handleAddEntries(request, env)
+    }
+    if (url.pathname === '/api/inventory/deduct') {
+      if (request.method === 'OPTIONS') return options('POST')
+      if (request.method !== 'POST') return methodNotAllowed()
+      if (!env.DB) return jsonServerError()
+      return handleDeduct(request, env)
+    }
+    if (url.pathname === '/api/inventory/settings') {
+      if (request.method === 'OPTIONS') return options('PUT')
+      if (request.method !== 'PUT') return methodNotAllowed()
+      if (!env.DB) return jsonServerError()
+      return handleUpdateSettings(request, env)
+    }
+    if (url.pathname === '/api/inventory/ledger') {
+      if (request.method === 'OPTIONS') return options('GET')
+      if (request.method !== 'GET') return methodNotAllowed()
+      if (!env.DB) return jsonServerError()
+      return handleGetLedger(request, env)
+    }
+    if (url.pathname.startsWith('/api/inventory/codes/')) {
+      if (request.method === 'OPTIONS') return options('PUT')
+      if (request.method !== 'PUT') return methodNotAllowed()
+      if (!env.DB) return jsonServerError()
+      const code = decodeURIComponent(url.pathname.slice('/api/inventory/codes/'.length))
+      return handleSetQuantity(request, env, code)
     }
 
     if (url.pathname === '/api/xhs/parse') {
