@@ -1,7 +1,9 @@
 import type { BeadColor } from '../palette'
 import type { BeadPattern, PatternCell } from '../pattern'
+import { classifyCell } from './classify'
 import { mapRgbToBead } from './empty'
 import { medianByte } from './image-data'
+import type { UncertainSample } from './types'
 
 const MIN_CELL = 4
 const MAX_CELL = 80
@@ -71,6 +73,82 @@ export function tryBuildGridPattern(
     cells,
     counts,
     emptyCount,
+  }
+}
+
+export type GridWithUncertain = {
+  pattern: BeadPattern
+  uncertainSamples: UncertainSample[]
+  uncertainMask: Uint8Array
+}
+
+/**
+ * Like tryBuildGridPattern but tracks uncertain cells separately.
+ * Uncertain = not background + distance > threshold (user decides).
+ * Returns null when confidence gates fail.
+ */
+export function tryBuildGridPatternWithUncertain(
+  patternRegion: ImageData,
+  palette: BeadColor[],
+): GridWithUncertain | null {
+  if (palette.length === 0) return null
+  const { width, height } = patternRegion
+  if (width < MIN_CELL * MIN_DIM || height < MIN_CELL * MIN_DIM) return null
+
+  const cellSize = detectCellSize(patternRegion)
+  if (cellSize == null || cellSize < MIN_CELL || cellSize > MAX_CELL) return null
+
+  const origin = estimateOrigin(patternRegion, cellSize)
+  const cols = Math.floor((width - origin.x) / cellSize)
+  const rows = Math.floor((height - origin.y) / cellSize)
+
+  if (cols < MIN_DIM || rows < MIN_DIM || cols > MAX_DIM || rows > MAX_DIM) return null
+  const coverageX = (cols * cellSize) / width
+  const coverageY = (rows * cellSize) / height
+  if (coverageX < 0.82 || coverageY < 0.82) return null
+
+  const cells: PatternCell[] = new Array(cols * rows)
+  const counts = new Map<string, number>()
+  const uncertainMask = new Uint8Array(cols * rows)
+  const uncertainSamples: UncertainSample[] = []
+  let stable = 0
+
+  for (let row = 0; row < rows; row += 1) {
+    for (let col = 0; col < cols; col += 1) {
+      const cx = origin.x + col * cellSize
+      const cy = origin.y + row * cellSize
+      const sample = sampleCell(patternRegion, cx, cy, cellSize)
+      const classification = classifyCell(sample.r, sample.g, sample.b, palette)
+      const index = row * cols + col
+
+      if (classification.type === 'matched' && classification.color) {
+        cells[index] = classification.color
+        counts.set(classification.color.code, (counts.get(classification.color.code) ?? 0) + 1)
+      } else if (classification.type === 'uncertain') {
+        cells[index] = null
+        uncertainMask[index] = 1
+        uncertainSamples.push({ rgb: [sample.r, sample.g, sample.b], index })
+      } else {
+        cells[index] = null
+      }
+
+      if (sample.stable) stable += 1
+    }
+  }
+
+  const total = cols * rows
+  if (stable / total < STABLE_RATIO) return null
+  if (counts.size === 0 && uncertainSamples.length === 0) return null
+
+  const matchedCount = [...counts.values()].reduce((s, v) => s + v, 0)
+  // Uncertain cells are not truly empty for the empty-ratio gate
+  const realEmpty = total - uncertainSamples.length - matchedCount
+  if (realEmpty / total > 0.92) return null
+
+  return {
+    pattern: { width: cols, height: rows, cells, counts, emptyCount: realEmpty },
+    uncertainSamples,
+    uncertainMask,
   }
 }
 
