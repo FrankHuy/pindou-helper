@@ -1,0 +1,6 @@
+{"file":".trellis/spec/frontend/index.md","reason":"Frontend surface map, auth/AI boundaries, and product constraints for adding inventory."}
+{"file":".trellis/spec/frontend/directory-structure.md","reason":"Where to place inventory feature, lib pure math, worker inventory modules, and import boundaries."}
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"Tab shell, keep-alive, feature CSS, Chinese UI conventions for inventory tab."}
+{"file":".trellis/spec/frontend/state-management.md","reason":"No global store; shell/session-owned cloud inventory state patterns."}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Build/lint gates, privacy (no sheet upload), Worker session/error invariants."}
+{"file":".trellis/spec/frontend/workshop.md","reason":"Workshop recognition contracts for start/end integration without regressions."}

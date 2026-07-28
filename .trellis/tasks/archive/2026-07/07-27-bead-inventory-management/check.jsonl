@@ -1,0 +1,6 @@
+{"file":".trellis/spec/frontend/index.md","reason":"Check inventory work against overall frontend product/spec index."}
+{"file":".trellis/spec/frontend/directory-structure.md","reason":"Verify module placement and import boundaries for feature/lib/worker split."}
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"Verify tab integration, keep-alive, feature CSS, accessibility patterns."}
+{"file":".trellis/spec/frontend/state-management.md","reason":"Verify session-backed inventory state ownership stays local/no-store."}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Build/lint, privacy, session cookie, Chinese API error review."}
+{"file":".trellis/spec/frontend/workshop.md","reason":"Verify workshop analyze/highlight contracts remain intact after start/end."}
