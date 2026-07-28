@@ -10,11 +10,28 @@ import {
   type WorkshopAnalyzeOutput,
 } from '../../lib/workshop/analyze'
 import { drawPattern, HIGHLIGHT_DIM_ALPHA } from '../../lib/pattern'
+import type { PublicUser } from '../auth/authApi'
+import type { InventorySnapshot, InventoryUsageSnapshot, ShortageItem, LowStockItem } from '../../lib/inventory/types'
+import type { DeductResponse } from '../../lib/inventory/types'
+import { buildUsageSnapshot, calculateShortages, calculateLowStock, recordsToMap } from '../../lib/inventory/math'
+import { deductInventory, InventoryRequestError } from '../inventory/inventoryApi'
 import './workshop.css'
 
 const ACCEPT = 'image/png,image/jpeg,image/webp,image/*'
 
-export default function BeadWorkshopTab() {
+type BeadWorkshopTabProps = {
+  sessionUser: PublicUser | null
+  inventory: InventorySnapshot | null
+  onInventoryDeducted: (snapshot: InventorySnapshot) => void
+  onLogin: () => void
+}
+
+export default function BeadWorkshopTab({
+  sessionUser,
+  inventory,
+  onInventoryDeducted,
+  onLogin,
+}: BeadWorkshopTabProps) {
   const [fileName, setFileName] = useState('')
   const [sourceUrl, setSourceUrl] = useState('')
   const [imageData, setImageData] = useState<ImageData | null>(null)
@@ -25,6 +42,14 @@ export default function BeadWorkshopTab() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [dragging, setDragging] = useState(false)
+
+  // --- Inventory integration state ---
+  const [activeSession, setActiveSession] = useState<InventoryUsageSnapshot | null>(null)
+  const [shortageItems, setShortageItems] = useState<ShortageItem[]>([])
+  const [deductResult, setDeductResult] = useState<DeductResponse | null>(null)
+  const [deductLowStock, setDeductLowStock] = useState<LowStockItem[]>([])
+  const [inventoryBusy, setInventoryBusy] = useState(false)
+  const [inventoryError, setInventoryError] = useState('')
 
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const sourceWrapRef = useRef<HTMLDivElement>(null)
@@ -200,6 +225,58 @@ export default function BeadWorkshopTab() {
     setHighlightCode((prev) => (prev === code ? null : code))
   }
 
+  // --- Inventory start/finish handlers ---
+
+  const hasUsageResult = !!(result && result.colors.some((c) => c.count > 0))
+  const canStartInventory = !!(sessionUser && hasUsageResult && !activeSession)
+  const canEndInventory = !!(activeSession && !inventoryBusy)
+
+  const handleStart = useCallback(() => {
+    if (!result || !hasUsageResult) return
+    const snapshot = buildUsageSnapshot(result.colors)
+    setActiveSession(snapshot)
+    setDeductResult(null)
+    setDeductLowStock([])
+    const invMap = inventory ? recordsToMap(inventory.records) : new Map<string, number>()
+    const shortages = calculateShortages(invMap, snapshot)
+    setShortageItems(shortages)
+    setInventoryError('')
+  }, [result, hasUsageResult, inventory])
+
+  const handleEnd = useCallback(async () => {
+    if (!activeSession) return
+    setInventoryBusy(true)
+    setInventoryError('')
+    try {
+      const response = await deductInventory(activeSession.items, String(activeSession.createdAt))
+      onInventoryDeducted(response)
+      setDeductResult(response)
+      // Calculate low-stock for used codes
+      const usedCodes = new Set(activeSession.items.map((i) => i.code))
+      const lowStock = calculateLowStock(response, usedCodes)
+      setDeductLowStock(lowStock)
+      setActiveSession(null)
+      setShortageItems([])
+    } catch (err) {
+      setInventoryError(err instanceof InventoryRequestError ? err.message : '扣减库存失败')
+    } finally {
+      setInventoryBusy(false)
+    }
+  }, [activeSession, onInventoryDeducted])
+
+  const handleCancelSession = useCallback(() => {
+    setActiveSession(null)
+    setShortageItems([])
+  }, [])
+
+  const handleDismissResult = useCallback(() => {
+    setDeductResult(null)
+    setDeductLowStock([])
+  }, [])
+
+  // Warn that re-recognize doesn't change locked snapshot
+  const reRecognizeAware = activeSession != null && result != null
+
   const modeLabel = result?.mode === 'grid' ? '格点识别' : result?.mode === 'pixel' ? '像素模式' : null
 
   const statsLabel = (() => {
@@ -303,6 +380,105 @@ export default function BeadWorkshopTab() {
                 </div>
               </div>
             </>
+          )}
+
+          {/* Inventory start/end section */}
+          {hasUsageResult && (
+            <div className="workshop-inventory-section">
+              <p className="workshop-inventory-heading">豆子库存</p>
+              {!sessionUser ? (
+                <p className="workshop-inventory-cta">
+                  <button type="button" className="workshop-login-link" onClick={onLogin}>登录</button>后可开始制作并自动扣减库存
+                </p>
+              ) : activeSession ? (
+                <div className="inventory-start-section">
+                  <p className="workshop-hint">制作中：{activeSession.items.length} 个色号已锁定</p>
+                  <button
+                    type="button"
+                    className="workshop-end-btn"
+                    onClick={() => void handleEnd()}
+                    disabled={!canEndInventory}
+                  >
+                    {inventoryBusy ? '扣减中…' : '结束制作'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCancelSession}
+                    disabled={inventoryBusy}
+                  >
+                    取消
+                  </button>
+                  {reRecognizeAware && (
+                    <p className="workshop-hint warn">
+                      重新识别不会改变当前扣减用量，如需变更请先取消再重新开始。
+                    </p>
+                  )}
+                  {/* Locked snapshot summary */}
+                  <div className="workshop-shortage">
+                    <p className="workshop-hint" style={{ fontWeight: 600 }}>本次用量快照</p>
+                    {activeSession.items.map((item) => (
+                      <div key={item.code} className="workshop-shortage-item">
+                        <span>{item.code}</span>
+                        <span>{item.quantity} 颗</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  className="workshop-start-btn"
+                  onClick={handleStart}
+                  disabled={!canStartInventory}
+                >
+                  开始制作
+                </button>
+              )}
+
+              {inventoryError && (
+                <p className="workshop-error">{inventoryError}</p>
+              )}
+
+              {/* Shortage list (after start) */}
+              {activeSession && shortageItems.length > 0 && (
+                <div className="workshop-shortage">
+                  <p className="workshop-hint warn" style={{ fontWeight: 600 }}>
+                    库存不足（仍可继续制作）
+                  </p>
+                  {shortageItems.map((s) => (
+                    <div key={s.code} className="workshop-shortage-item">
+                      <span>{s.code}</span>
+                      <span>库存 {s.balance} 颗 · 需要 {s.needed} 颗 · 缺 {s.gap} 颗</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Deduct result */}
+              {deductResult && (
+                <div className="workshop-shortage">
+                  <p className="workshop-hint" style={{ fontWeight: 600 }}>扣减完成</p>
+                  {deductResult.shortages.length > 0 && (
+                    <p className="workshop-hint warn">
+                      部分色号库存不足：{' '}
+                      {deductResult.shortages.map((s) => `${s.code} (缺 ${s.needed - s.deducted} 颗)`).join(', ')}
+                    </p>
+                  )}
+                  {deductLowStock.length > 0 && (
+                    <div>
+                      <p className="workshop-hint warn" style={{ fontWeight: 600 }}>建议补豆</p>
+                      {deductLowStock.map((ls) => (
+                        <div key={ls.code} className="workshop-shortage-item">
+                          <span>{ls.code}</span>
+                          <span>剩余 {ls.quantity} 颗 · 阈值 {ls.threshold} 颗</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <button type="button" onClick={handleDismissResult}>关闭</button>
+                </div>
+              )}
+            </div>
           )}
         </aside>
 
