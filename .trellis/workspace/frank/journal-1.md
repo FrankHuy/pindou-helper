@@ -417,3 +417,39 @@ Implemented optional bead AI optimize: POST /api/ai/image-edit (single edits, ba
 ### Next Steps
 
 - None - task complete
+
+
+## Session 13: 豆子库存管理：账户绑定库存、表格录入、流水、工坊开始/结束扣减
+
+**Date**: 2026-07-28
+**Task**: 豆子库存管理：账户绑定库存、表格录入、流水、工坊开始/结束扣减
+**Branch**: `main`
+
+### Summary
+
+实现账号绑定的豆子库存管理功能：D1 存储与 API（录入/校正/扣减/设置/流水）、库存管理 Tab（表格录入、单色校正、阈值设置、流水折叠区）、拼豆工作间开始/结束集成（开始锁定用量快照、结束扣减 clamp-to-zero、低库存提醒）、前端 spec 更新（6 个 spec 文件）。build 和 lint 通过。
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `0868f84` | (see git log) |
+| `1dd09de` | (see git log) |
+| `06f3b99` | (see git log) |
+| `fce761d` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

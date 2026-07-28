@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 12
-- **Last Active**: 2026-07-23
+- **Total Sessions**: 13
+- **Last Active**: 2026-07-28
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~419 | Active |
+| `journal-1.md` | ~455 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 13 | 2026-07-28 | 豆子库存管理：账户绑定库存、表格录入、流水、工坊开始/结束扣减 | `0868f84`, `1dd09de`, `06f3b99`, `fce761d` | `main` |
 | 12 | 2026-07-23 | 拼豆图纸AI优化出图 | `8065f9f` | `main` |
 | 11 | 2026-07-23 | 收尾 Bootstrap Guidelines | `37d0245` | `main` |
 | 10 | 2026-07-22 | 用户体系与AI成本治理 Phase 1 | `196c582`, `de4233b`, `e040460`, `150de96` | `main` |
