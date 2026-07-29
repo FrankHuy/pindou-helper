@@ -43,6 +43,20 @@ const [inventoryError, setInventoryError] = useState('')
 - Passed as props to `InventoryTab` and `BeadWorkshopTab` (for start/finish).
 - No global store; shell owns cloud-backed state and passes props.
 
+### Theme preference (owned by App shell)
+
+```ts
+type ThemePreference = 'system' | 'light' | 'dark'
+const THEME_STORAGE_KEY = 'pindou-theme'
+```
+
+- Default is `system`; absence of the localStorage key means system mode.
+- `light` / `dark` selections persist under `pindou-theme`.
+- Resolve system mode with `matchMedia('(prefers-color-scheme: dark)')` and listen for changes even while the app remains mounted.
+- Write the resolved value (`light` or `dark`, never `system`) to `document.documentElement.dataset.theme` and `document.documentElement.style.colorScheme`.
+- Storage failures are non-fatal: apply the theme for the current session and keep business state independent.
+- Theme is shell presentation state only. Do not put it in inventory state, feature props, a global store, URL parameters, or Worker APIs.
+
 ---
 
 ## Bead tab state categories

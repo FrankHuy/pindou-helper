@@ -236,3 +236,69 @@
     display: none;
   }
 }
+
+/* Warm workshop theme */
+.auth-page {
+  background:
+    radial-gradient(circle at 18% 12%, var(--accent-soft) 0 2px, transparent 3px) 0 0 / 26px 26px,
+    var(--canvas);
+  color: var(--text);
+}
+.auth-topbar {
+  min-height: 64px;
+  padding: 0 18px;
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  border-color: var(--border);
+  backdrop-filter: blur(14px);
+}
+.auth-back,
+.auth-session-btn {
+  border-color: var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-soft);
+  color: var(--text-soft);
+}
+.auth-back:hover,
+.auth-session-btn:hover { border-color: var(--brand); color: var(--brand-strong); background: var(--brand-soft); }
+.auth-card {
+  margin-top: 40px;
+  padding: 26px 24px 28px;
+  background: var(--surface);
+  border-color: var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+}
+.auth-card h2 { color: var(--text); font-size: 20px; letter-spacing: -0.02em; }
+.auth-lead,
+.auth-field label,
+.auth-hint,
+.auth-session-email,
+.auth-session-note { color: var(--text-muted); }
+.auth-field input {
+  min-height: 42px;
+  border-color: var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  color: var(--text);
+}
+.auth-field input:focus { outline: 0; border-color: var(--brand); box-shadow: var(--focus-ring); }
+.auth-submit,
+.auth-session-link {
+  border-radius: var(--radius-sm);
+  background: var(--brand);
+  border-color: var(--brand);
+  color: var(--brand-contrast);
+  box-shadow: var(--shadow-sm);
+}
+.auth-submit:hover:not(:disabled),
+.auth-session-link:hover { background: var(--brand-strong); border-color: var(--brand-strong); }
+.auth-error { background: var(--danger-soft); border-color: color-mix(in srgb, var(--danger) 35%, var(--border)); color: var(--danger); border-radius: var(--radius-sm); }
+.auth-error-inline { color: var(--danger); }
+.auth-success { background: var(--success-soft); border-color: color-mix(in srgb, var(--success) 35%, var(--border)); color: var(--success); border-radius: var(--radius-sm); }
+.auth-links button { color: var(--brand); }
+.auth-session-badge { color: var(--warning); background: var(--warning-soft); padding: 3px 7px; border-radius: var(--radius-pill); }
+.auth-session-quota { color: var(--brand); }
+
+@media (max-width: 620px) {
+  .auth-card { margin-top: 22px; }
+}

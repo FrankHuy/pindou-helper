@@ -771,3 +771,158 @@
   );
   border: 1px solid #c5cbc4;
 }
+
+/* Warm workshop theme */
+.workshop-workspace { min-height: calc(100dvh - 120px); background: var(--canvas); color: var(--text); }
+.workshop-layout { grid-template-columns: minmax(270px, 340px) minmax(0, 1fr); }
+.workshop-side {
+  background: var(--surface);
+  border-color: var(--border);
+  padding: 16px 14px 28px;
+  gap: 12px;
+}
+.workshop-main { background: var(--stage); }
+.workshop-upload,
+.workshop-palette-confirm,
+.workshop-uncertain-section,
+.workshop-inventory-section,
+.inventory-start-section {
+  padding: 13px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-soft);
+  box-shadow: var(--shadow-sm);
+}
+.workshop-upload-button {
+  min-height: 42px;
+  border-color: var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  color: var(--brand-strong);
+}
+.workshop-upload-button:hover { border-color: var(--brand); background: var(--brand-soft); }
+.workshop-hint,
+.workshop-cluster-chip .cluster-count { color: var(--text-muted); }
+.workshop-hint.warn { color: var(--warning); }
+.workshop-error { background: var(--danger-soft); border-color: color-mix(in srgb, var(--danger) 35%, var(--border)); color: var(--danger); border-radius: var(--radius-sm); }
+.workshop-ok { background: var(--success-soft); border-color: color-mix(in srgb, var(--success) 35%, var(--border)); color: var(--success); border-radius: var(--radius-sm); }
+.workshop-source-wrap,
+.workshop-source-frame {
+  border-color: var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-muted);
+}
+.workshop-split-line { border-color: var(--brand); }
+.workshop-split-handle { background: var(--brand); color: var(--brand-contrast); box-shadow: var(--shadow-md); }
+.workshop-actions button,
+.workshop-confirm-btn,
+.workshop-start-btn,
+.workshop-end-btn,
+.workshop-login-link,
+.workshop-add-toggle {
+  border-color: var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  color: var(--text-soft);
+}
+.workshop-actions button:hover:not(:disabled),
+.workshop-add-toggle:hover { border-color: var(--brand); color: var(--brand-strong); background: var(--brand-soft); }
+.workshop-actions button.primary,
+.workshop-confirm-btn,
+.workshop-start-btn {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: var(--brand-contrast);
+  box-shadow: var(--shadow-sm);
+}
+.workshop-end-btn { background: var(--accent); border-color: var(--accent); color: #fff; }
+.workshop-mode-badge { background: var(--brand-soft); color: var(--brand-strong); border-color: color-mix(in srgb, var(--brand) 30%, var(--border)); border-radius: var(--radius-pill); }
+.workshop-mode-badge.pixel { background: var(--warning-soft); border-color: color-mix(in srgb, var(--warning) 35%, var(--border)); color: var(--warning); }
+.workshop-toolbar { min-height: 54px; background: var(--surface-soft); border-color: var(--border); }
+.workshop-toolbar .dimensions,
+.workshop-zoom { color: var(--text-muted); }
+.workshop-zoom input { accent-color: var(--brand); }
+.workshop-stage {
+  background-color: var(--stage);
+  background-image:
+    linear-gradient(var(--stage-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--stage-grid) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+.workshop-stage canvas { box-shadow: var(--shadow-lg); }
+.workshop-empty {
+  border-color: var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  box-shadow: var(--shadow-sm);
+}
+.workshop-empty span { color: var(--text-muted); }
+.workshop-colors-heading small { color: var(--warning); }
+.workshop-color-chip,
+.workshop-palette-chip,
+.workshop-cluster-chip {
+  border-color: var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--surface-raised);
+  color: var(--text-soft);
+}
+.workshop-color-chip:hover,
+.workshop-palette-chip:hover,
+.workshop-cluster-chip:hover { border-color: var(--brand); }
+.workshop-color-chip.active,
+.workshop-palette-chip.active,
+.workshop-cluster-chip.active {
+  background: var(--brand-soft);
+  border-color: var(--brand);
+  color: var(--brand-strong);
+  box-shadow: inset 0 0 0 1px var(--brand);
+}
+.workshop-chip-delete { color: var(--text-muted); }
+.workshop-add-panel,
+.workshop-assign-panel {
+  border-color: var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+.workshop-add-search { border-color: var(--border); border-radius: var(--radius-sm); background: var(--surface-raised); color: var(--text); }
+.workshop-shortage,
+.workshop-active-warning,
+.workshop-low-stock { background: var(--warning-soft); border-color: color-mix(in srgb, var(--warning) 35%, var(--border)); color: var(--warning); border-radius: var(--radius-sm); }
+.workshop-active-row,
+.workshop-shortage-item { border-color: var(--border); background: var(--surface-raised); }
+.workshop-inventory-heading { color: var(--text); }
+.workshop-cluster-chip .cluster-assign-label { color: var(--brand); }
+.workshop-empty-chip .empty-swatch {
+  background: repeating-linear-gradient(45deg, var(--surface-muted), var(--surface-muted) 3px, var(--border) 3px, var(--border) 6px);
+  border-color: var(--border-strong);
+}
+.workshop-color-chip .count,
+.workshop-inventory-cta,
+.workshop-active-row .sub { color: var(--text-muted); }
+.workshop-inventory-cta a,
+.workshop-login-link { color: var(--brand); }
+.workshop-loading {
+  background: var(--surface);
+  border-color: var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+}
+.workshop-active-row {
+  border-color: color-mix(in srgb, var(--success) 30%, var(--border));
+  background: var(--success-soft);
+}
+.workshop-shortage .num,
+.workshop-low-stock .num { color: var(--warning); }
+.workshop-chip-delete:hover { background: var(--danger-soft); color: var(--danger); }
+.workshop-add-item {
+  border-color: var(--border);
+  background: var(--surface-raised);
+  color: var(--text-soft);
+}
+.workshop-add-item:hover { border-color: var(--brand); background: var(--brand-soft); }
+.workshop-cluster-chip.assigned { background: var(--success-soft); }
+
+@media (max-width: 720px) {
+  .workshop-workspace { min-height: calc(100dvh - 112px); }
+  .workshop-side { padding: 12px; }
+}

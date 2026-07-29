@@ -39,6 +39,19 @@ const DownloadIcon = () => <span aria-hidden="true">↓</span>
 
 type AppTab = 'bead' | 'workshop' | 'xhs' | 'inventory'
 type ShellPage = 'app' | 'privacy' | 'about' | 'admin' | AuthPageId
+type ThemePreference = 'system' | 'light' | 'dark'
+
+const THEME_STORAGE_KEY = 'pindou-theme'
+
+function readThemePreference(): ThemePreference {
+  if (typeof window === 'undefined') return 'system'
+  try {
+    const saved = window.localStorage.getItem(THEME_STORAGE_KEY)
+    return saved === 'light' || saved === 'dark' ? saved : 'system'
+  } catch {
+    return 'system'
+  }
+}
 
 const AUTH_PAGES: AuthPageId[] = ['login', 'register', 'forgot', 'reset', 'verify']
 
@@ -137,6 +150,12 @@ function App() {
   const [authRefresh, setAuthRefresh] = useState(0)
   const [sessionUser, setSessionUser] = useState<PublicUser | null>(null)
   const [tab, setTab] = useState<AppTab>('bead')
+  const [themePreference, setThemePreference] = useState<ThemePreference>(readThemePreference)
+  const [systemDark, setSystemDark] = useState(() =>
+    typeof window !== 'undefined'
+      ? window.matchMedia('(prefers-color-scheme: dark)').matches
+      : false,
+  )
   const [workshopImport, setWorkshopImport] = useState<WorkshopImportRequest | null>(null)
   const workshopImportTokenRef = useRef(0)
   const [file, setFile] = useState<File | null>(null)
@@ -203,6 +222,31 @@ function App() {
     bgTolerance,
     bgSampleRgb,
   }
+
+  const resolvedTheme =
+    themePreference === 'system' ? (systemDark ? 'dark' : 'light') : themePreference
+
+  useEffect(() => {
+    const media = window.matchMedia('(prefers-color-scheme: dark)')
+    const handleChange = (event: MediaQueryListEvent) => setSystemDark(event.matches)
+    setSystemDark(media.matches)
+    media.addEventListener('change', handleChange)
+    return () => media.removeEventListener('change', handleChange)
+  }, [])
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = resolvedTheme
+    document.documentElement.style.colorScheme = resolvedTheme
+    try {
+      if (themePreference === 'system') {
+        window.localStorage.removeItem(THEME_STORAGE_KEY)
+      } else {
+        window.localStorage.setItem(THEME_STORAGE_KEY, themePreference)
+      }
+    } catch {
+      // Theme still applies for this session when storage is unavailable.
+    }
+  }, [resolvedTheme, themePreference])
 
   const navigateShell = useCallback((page: ShellPage) => {
     const path = page === 'app' ? '/' : `/${page}`
@@ -629,6 +673,19 @@ function App() {
                   : '公开帖高清图下载'}
           </p>
         </div>
+        <label className="theme-control">
+          <span aria-hidden="true">{resolvedTheme === 'dark' ? '☾' : '☀'}</span>
+          <select
+            aria-label="界面主题"
+            title="界面主题"
+            value={themePreference}
+            onChange={(event) => setThemePreference(event.target.value as ThemePreference)}
+          >
+            <option value="system">跟随系统</option>
+            <option value="light">亮色</option>
+            <option value="dark">暗色</option>
+          </select>
+        </label>
         <AuthSessionBar
           refreshToken={authRefresh}
           onLogin={() => navigateShell('login')}
@@ -650,6 +707,7 @@ function App() {
           onClick={() => setTab('bead')}
           aria-current={tab === 'bead' ? 'page' : undefined}
         >
+          <span className="app-tab-icon bead-tab-icon" aria-hidden="true">◆</span>
           拼豆图纸
         </button>
         <button
@@ -658,6 +716,7 @@ function App() {
           onClick={() => setTab('workshop')}
           aria-current={tab === 'workshop' ? 'page' : undefined}
         >
+          <span className="app-tab-icon" aria-hidden="true">⌗</span>
           拼豆工作间
         </button>
         <button
@@ -666,6 +725,7 @@ function App() {
           onClick={() => setTab('inventory')}
           aria-current={tab === 'inventory' ? 'page' : undefined}
         >
+          <span className="app-tab-icon" aria-hidden="true">▦</span>
           豆子库存
         </button>
         <button
@@ -674,6 +734,7 @@ function App() {
           onClick={() => setTab('xhs')}
           aria-current={tab === 'xhs' ? 'page' : undefined}
         >
+          <span className="app-tab-icon" aria-hidden="true">↙</span>
           小红书下图
         </button>
       </nav>

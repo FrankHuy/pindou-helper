@@ -84,6 +84,31 @@ type PrivacyPageProps = { onBack: () => void }
 - Active chips: `chip-button` + `active`
 - No inline style except dynamic colors (`backgroundColor: bead.hex`) and canvas sizing
 
+### Theme and design-token contract
+
+- `src/index.css` owns semantic tokens for both `html[data-theme='light']` and `html[data-theme='dark']`: canvas/surface/text/border, brand/accent/status colors, elevation, radii, focus ring, and motion.
+- `App.css` and feature CSS consume `var(--...)`; do not introduce a new hard-coded page background, text color, border color, or action color. Literal colors remain valid only for bead swatches, the four-color brand mark, image/lightbox media backgrounds, or deliberate translucent overlays.
+- Dark theme changes interface chrome only. Never apply `filter`, opacity, blend mode, or theme color replacement to Canvas, source images, QR images, or bead swatches.
+- Keep feature geometry in its co-located CSS. Shared tokens are global; feature-specific selector overrides stay in `features/<feature>/<feature>.css`.
+- Interactive motion is short and functional. Global transitions use `--motion-fast` / `--motion-base`, while `prefers-reduced-motion` disables non-essential motion.
+
+```css
+/* Correct */
+.feature-card {
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+/* Wrong — light-only chrome that breaks dark mode */
+.feature-card {
+  color: #202523;
+  background: #fff;
+  border: 1px solid #ddd;
+}
+```
+
 ---
 
 ## Interaction patterns
@@ -119,3 +144,5 @@ type PrivacyPageProps = { onBack: () => void }
 | Put OCR or network in workshop | Local Canvas only |
 | Privacy page mentions XHS download | Forbidden product copy |
 | New runtime UI dependency for one tab | Prefer existing CSS + React patterns |
+| Hard-code light page/surface/control colors | Use semantic tokens from `index.css`; verify both themes |
+| Theme Canvas/images with CSS filters | Theme surrounding chrome only; media and swatches keep true colors |

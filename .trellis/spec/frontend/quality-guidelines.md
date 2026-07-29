@@ -44,6 +44,7 @@ Prefer pure-frontend algorithms; **no new runtime deps** unless task-approved.
 - Inventory API client uses `credentials: include` (session cookie); login gate CTA when unauthenticated
 - Inventory: grams ↔ beads conversion (`Math.round(value * 100)` for grams→beads); server and client validate non-negative integers
 - Inventory: sparse D1 rows (no full palette prefill); `touched` flag marks entered/used codes for low-stock filtering
+- Themeable UI chrome uses semantic CSS tokens from `src/index.css`; validate system/light/dark without filtering Canvas, images, QR codes, or color swatches
 
 ---
 
@@ -100,6 +101,13 @@ No unit test runner mandated yet. Minimum gates:
 4. Manual for workshop: export from bead tab → workshop upload → highlight + split retry
 5. Manual for XHS when workerd available: invalid URL; parse with/without Turnstile secret behavior
 6. Manual for auth when D1+Resend configured: register allowlist domain; Turnstile on `/register`; resend via `/verify`; AI ping requires verified session
+7. Manual for visual-system changes:
+   - system/ light / dark selector and refresh persistence
+   - system preference change while `ThemePreference === 'system'`
+   - desktop + 900px + 620px/narrow mobile layouts
+   - no root horizontal overflow (table/Canvas containers may scroll)
+   - visible focus/disabled/error/success states in both themes
+   - Canvas, uploaded images, QR images, and bead swatches keep original colors
 
 ---
 
@@ -118,3 +126,5 @@ No unit test runner mandated yet. Minimum gates:
 - [ ] Inventory: deduct clamps to 0; ledger written atomically with balance change
 - [ ] Inventory: no sheet images uploaded; only codes + quantities
 - [ ] Inventory: all UI text in Chinese; units marked 颗 or g
+- [ ] New UI chrome uses semantic tokens and has been checked in both light and dark themes
+- [ ] Theme changes do not filter or recolor Canvas, source/result images, QR images, or swatches

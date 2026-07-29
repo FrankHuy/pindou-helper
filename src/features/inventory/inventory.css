@@ -504,3 +504,124 @@ table.inventory-grid {
 .inventory-tab h2 { font-size: 16px; margin: 0 0 4px; }
 .inventory-tab p.top-hint { font-size: 13px; color: #5f6763; margin: 0 0 8px; }
 
+/* Warm workshop theme */
+.inventory-host { background: var(--canvas); }
+.inventory-tab { max-width: 1040px; gap: 14px; padding: 22px 18px 42px; color: var(--text); }
+.inventory-tab h2 { font-size: 20px; letter-spacing: -0.02em; }
+.inventory-tab p.top-hint,
+.inventory-login-gate p,
+.inventory-loading,
+.inventory-grid-hint,
+.inventory-cell-hint,
+.inventory-entry-actions .submit-count { color: var(--text-muted); }
+.inventory-login-gate {
+  margin: 22px auto;
+  max-width: 560px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+.inventory-login-gate button,
+.inventory-submit {
+  border: 1px solid var(--brand);
+  border-radius: var(--radius-sm);
+  background: var(--brand);
+  color: var(--brand-contrast);
+  box-shadow: var(--shadow-sm);
+}
+.inventory-error { background: var(--danger-soft); color: var(--danger); border: 1px solid color-mix(in srgb, var(--danger) 35%, var(--border)); border-radius: var(--radius-sm); }
+.inventory-success { background: var(--success-soft); color: var(--success); border: 1px solid color-mix(in srgb, var(--success) 35%, var(--border)); border-radius: var(--radius-sm); }
+.inventory-overview { gap: 10px; }
+.inventory-stat {
+  background: linear-gradient(145deg, var(--surface), var(--surface-soft));
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+.inventory-stat-value { color: var(--text); }
+.inventory-stat-label,
+.inventory-unit-toggle.disabled-set span { color: var(--text-muted); }
+.inventory-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+.inventory-section-heading { color: var(--text); }
+.inventory-unit-toggle button,
+.inventory-filters .chip-button,
+.inventory-correction-row button,
+.inventory-ledger-toggle,
+.inventory-ledger-load-more,
+.inventory-scope-row button {
+  border-color: var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--surface-raised);
+  color: var(--text-soft);
+}
+.inventory-unit-toggle button:hover,
+.inventory-filters .chip-button:hover,
+.inventory-correction-row button:hover,
+.inventory-ledger-toggle:hover,
+.inventory-ledger-load-more:hover { border-color: var(--brand); color: var(--brand-strong); }
+.inventory-unit-toggle button.active,
+.inventory-filters .chip-button.active,
+.inventory-scope-row button.scope-chip.active {
+  background: var(--brand);
+  color: var(--brand-contrast);
+  border-color: var(--brand);
+}
+.inventory-grid-wrap {
+  border-color: var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+}
+.inventory-grid th,
+.inventory-grid td { border-color: var(--border); }
+.inventory-grid th,
+.inventory-grid td.row-header { background: var(--surface-muted); color: var(--text-soft); }
+.inventory-grid-cell .cell-balance,
+.inventory-correction-row .balance { color: var(--text-muted); }
+.inventory-grid-cell input,
+.inventory-correction-row input,
+.inventory-settings-row input,
+.inventory-scope-row select {
+  border-color: var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  color: var(--text);
+}
+.inventory-correction-row { background: var(--surface-soft); border: 1px solid transparent; }
+.inventory-correction-row:hover { border-color: var(--border); }
+.inventory-correction-row .low-badge { color: var(--warning); background: var(--warning-soft); border-radius: var(--radius-pill); }
+.inventory-ledger {
+  border-color: var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+.inventory-ledger-toggle,
+.inventory-ledger-entry { border-color: var(--border); }
+.inventory-ledger-entry:hover { background: var(--surface-soft); }
+.inventory-settings-row button {
+  border-color: var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  color: var(--text-soft);
+}
+.inventory-settings-row button.primary {
+  background: var(--brand);
+  color: var(--brand-contrast);
+  border-color: var(--brand);
+}
+.inventory-ledger-entry .entry-delta.positive { color: var(--success); }
+.inventory-ledger-entry .entry-delta.negative { color: var(--danger); }
+.inventory-ledger-entry .entry-reason,
+.inventory-ledger-entry .entry-time,
+.inventory-scope-label { color: var(--text-muted); }
+.inventory-empty { color: var(--text-muted); }
+
+@media (max-width: 620px) {
+  .inventory-tab { padding: 16px 10px 32px; }
+}

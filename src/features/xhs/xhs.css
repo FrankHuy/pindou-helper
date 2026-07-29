@@ -362,3 +362,67 @@
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
+
+/* Warm workshop theme */
+.xhs-tab { min-height: calc(100dvh - 120px); background: var(--canvas); color: var(--text); }
+.xhs-panel { max-width: 980px; padding-top: 30px; }
+.xhs-intro h2 { font-size: 21px; letter-spacing: -0.02em; }
+.xhs-intro p,
+.xhs-label,
+.xhs-compliance,
+.xhs-status-loading,
+.xhs-result-head span,
+.xhs-save-hint { color: var(--text-muted); }
+.xhs-form,
+.xhs-status {
+  background: var(--surface);
+  border-color: var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+.xhs-input {
+  border-color: var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-soft);
+  color: var(--text);
+}
+.xhs-input:focus { border-color: var(--brand); outline: 0; box-shadow: var(--focus-ring); }
+.xhs-primary {
+  border: 1px solid var(--brand);
+  border-radius: var(--radius-sm);
+  background: var(--brand);
+  color: var(--brand-contrast);
+  box-shadow: var(--shadow-sm);
+}
+.xhs-primary:hover:not(:disabled) { background: var(--brand-strong); border-color: var(--brand-strong); }
+.xhs-secondary,
+.xhs-jpg-toggle {
+  border-color: var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  color: var(--text-soft);
+}
+.xhs-secondary:hover,
+.xhs-jpg-toggle:hover { border-color: var(--brand); color: var(--brand-strong); background: var(--brand-soft); }
+.xhs-jpg-toggle input { accent-color: var(--brand); }
+.xhs-status-error { color: var(--danger); }
+.xhs-thumb {
+  border-color: var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-muted);
+  box-shadow: var(--shadow-sm);
+}
+.xhs-thumb:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); border-color: var(--brand); }
+.xhs-thumb-index { background: color-mix(in srgb, var(--brand) 90%, transparent); border-radius: var(--radius-pill); }
+.xhs-lightbox { background: var(--overlay); backdrop-filter: blur(10px); }
+.xhs-lightbox-inner { border-radius: var(--radius-lg); background: #101512; color: #f3f5f2; box-shadow: var(--shadow-lg); }
+.xhs-lightbox-toolbar,
+.xhs-lightbox-actions { background: #18201b; border-color: #334039; }
+.xhs-lightbox-stage { background: #0d120f; }
+.xhs-nav { background: rgba(255, 255, 255, 0.16); }
+.xhs-save-feedback { color: var(--success); }
+
+@media (max-width: 620px) {
+  .xhs-tab { min-height: calc(100dvh - 112px); }
+  .xhs-panel { padding-top: 20px; }
+}

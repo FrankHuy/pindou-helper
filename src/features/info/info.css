@@ -148,3 +148,39 @@
 .app-footer-sep {
   color: #c5cbc6;
 }
+
+/* Warm workshop theme */
+.info-page { background: var(--canvas); color: var(--text); }
+.info-topbar {
+  min-height: 64px;
+  padding: 0 18px;
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  border-color: var(--border);
+  backdrop-filter: blur(14px);
+}
+.info-back {
+  border-color: var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-soft);
+  color: var(--text-soft);
+}
+.info-back:hover { border-color: var(--brand); color: var(--brand-strong); background: var(--brand-soft); }
+.info-article { max-width: 780px; padding-top: 32px; font-size: 14px; }
+.info-article h2 { color: var(--text); letter-spacing: -0.01em; }
+.info-lead,
+.info-article p,
+.info-article ul { color: var(--text-soft); }
+.info-article a,
+.info-tip h2 { color: var(--brand); }
+.info-updated,
+.info-tip-copy { color: var(--text-muted); }
+.info-tip {
+  border-color: var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+.info-qr img { border-color: var(--border); border-radius: var(--radius-sm); background: #fff; }
+.app-footer { border-color: var(--border); background: var(--canvas-subtle); color: var(--text-muted); }
+.app-footer button { color: var(--brand); }
+.app-footer-sep { color: var(--border-strong); }

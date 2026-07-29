@@ -301,3 +301,63 @@
     max-width: 100%;
   }
 }
+
+/* Warm workshop theme */
+.admin-page { background: var(--canvas); color: var(--text); }
+.admin-topbar {
+  min-height: 64px;
+  padding: 0 18px;
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  border-color: var(--border);
+  backdrop-filter: blur(14px);
+}
+.admin-back,
+.admin-btn {
+  border-color: var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-soft);
+  color: var(--text-soft);
+}
+.admin-back:hover,
+.admin-btn:hover:not(:disabled) { border-color: var(--brand); color: var(--brand-strong); background: var(--brand-soft); }
+.admin-role-chip,
+.admin-badge.is-admin { color: var(--brand); background: var(--brand-soft); }
+.admin-body { max-width: 1040px; gap: 14px; margin-top: 26px; }
+.admin-card {
+  background: var(--surface);
+  border-color: var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  padding: 18px;
+}
+.admin-card h2 { color: var(--text); letter-spacing: -0.01em; }
+.admin-lead,
+.admin-field label,
+.admin-muted,
+.admin-stat-label,
+.admin-table th { color: var(--text-muted); }
+.admin-row input[type='search'],
+.admin-row input[type='text'],
+.admin-row input[type='number'],
+.admin-field input,
+.admin-field textarea,
+.admin-field select {
+  border-color: var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  color: var(--text);
+}
+.admin-btn-primary { background: var(--brand); border-color: var(--brand); color: var(--brand-contrast); }
+.admin-btn-primary:hover:not(:disabled) { background: var(--brand-strong); color: var(--brand-contrast); }
+.admin-btn-danger { background: var(--danger-soft); border-color: color-mix(in srgb, var(--danger) 35%, var(--border)); color: var(--danger); }
+.admin-btn-ok { background: var(--success-soft); border-color: color-mix(in srgb, var(--success) 35%, var(--border)); color: var(--success); }
+.admin-error { background: var(--danger-soft); border-color: color-mix(in srgb, var(--danger) 35%, var(--border)); color: var(--danger); border-radius: var(--radius-sm); }
+.admin-ok { background: var(--success-soft); border-color: color-mix(in srgb, var(--success) 35%, var(--border)); color: var(--success); border-radius: var(--radius-sm); }
+.admin-stat { background: var(--surface-soft); border-color: var(--border); border-radius: var(--radius-sm); }
+.admin-stat-value.is-danger { color: var(--danger); }
+.admin-table th,
+.admin-table td { border-color: var(--border); }
+.admin-table tbody tr:hover { background: var(--surface-soft); }
+.admin-badge { background: var(--surface-muted); color: var(--text-soft); }
+.admin-badge.is-banned { background: var(--danger-soft); color: var(--danger); }
+.admin-empty { color: var(--text-muted); }
