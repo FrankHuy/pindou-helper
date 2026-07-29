@@ -453,3 +453,36 @@ Implemented optional bead AI optimize: POST /api/ai/image-edit (single edits, ba
 ### Next Steps
 
 - None - task complete
+
+
+## Session 14: 生成图纸直达拼豆工作间
+
+**Date**: 2026-07-29
+**Task**: 生成图纸直达拼豆工作间
+**Branch**: `main`
+
+### Summary
+
+完成生成结果以内存 BeadPattern 直接注入工作间，跳过识别阶段并保留高亮、库存和导出能力；build 与 lint 验证通过。
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `7ff8714` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
