@@ -486,3 +486,36 @@ Implemented optional bead AI optimize: POST /api/ai/image-edit (single edits, ba
 ### Next Steps
 
 - None - task complete
+
+
+## Session 15: 全站 UI 视觉升级与暗色模式
+
+**Date**: 2026-07-29
+**Task**: 全站 UI 视觉升级与暗色模式
+**Branch**: `main`
+
+### Summary
+
+以温润创作工坊风格升级全站 UI，建立亮暗语义 design tokens、system/light/dark 三态主题、顶部工具导航和全页面响应式视觉体系；完成 build、lint 与桌面/移动端截图验证。
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `11d6744` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

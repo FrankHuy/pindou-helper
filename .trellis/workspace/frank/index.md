@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 14
+- **Total Sessions**: 15
 - **Last Active**: 2026-07-29
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~488 | Active |
+| `journal-1.md` | ~521 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 15 | 2026-07-29 | 全站 UI 视觉升级与暗色模式 | `11d6744` | `main` |
 | 14 | 2026-07-29 | 生成图纸直达拼豆工作间 | `7ff8714` | `main` |
 | 13 | 2026-07-28 | 豆子库存管理：账户绑定库存、表格录入、流水、工坊开始/结束扣减 | `0868f84`, `1dd09de`, `06f3b99`, `fce761d` | `main` |
 | 12 | 2026-07-23 | 拼豆图纸AI优化出图 | `8065f9f` | `main` |
