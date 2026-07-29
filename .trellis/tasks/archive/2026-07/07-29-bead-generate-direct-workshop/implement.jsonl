@@ -1,0 +1,17 @@
+[
+  {
+    "type": "code",
+    "file": "src/App.tsx",
+    "description": "Add "开始拼图" button after generation success"
+  },
+  {
+    "type": "code",
+    "file": "src/features/workshop/BeadWorkshopTab.tsx",
+    "description": "Automatic Phase 2 skip + loadGenerateParams"
+  },
+  {
+    "type": "code",
+    "file": "src/lib/workshop/analyze.ts",
+    "description": "Keep analyzeWorkshopImageData backward compat"
+  }
+]

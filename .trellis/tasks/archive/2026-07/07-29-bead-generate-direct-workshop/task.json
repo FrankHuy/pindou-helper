@@ -1,0 +1,16 @@
+{
+  "taskId": "07-29-bead-generate-direct-workshop",
+  "status": "completed",
+  "createdAt": "2026-07-29T10:00:00Z",
+  "owner": "main",
+  "parent": null,
+  "phase": "execute",
+  "artifacts": [
+    "prd.md",
+    "design.md",
+    "implement.md",
+    "implement.jsonl",
+    "check.jsonl"
+  ],
+  "completedAt": "2026-07-29"
+}

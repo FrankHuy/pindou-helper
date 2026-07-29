@@ -1,0 +1,17 @@
+[
+  {
+    "type": "spec",
+    "file": "src/App.tsx",
+    "description": "Button appears after generate and navigates to workshop"
+  },
+  {
+    "type": "spec",
+    "file": "src/features/workshop/BeadWorkshopTab.tsx",
+    "description": "Phase 1 skipped when generateParams present"
+  },
+  {
+    "type": "spec",
+    "file": "src/lib/workshop/analyze.ts",
+    "description": "analyzeWorkshopImageData still works as before"
+  }
+]
