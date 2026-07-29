@@ -66,11 +66,34 @@
 
 - [x] 10.1 `npm run build`
 - [x] 10.2 `npm run lint`
-- [ ] 10.3 Manual: watermark sheet flow
-- [ ] 10.4 Manual: clean sheet → no uncertain → done
-- [ ] 10.5 Manual: Phase 3 skip
-- [ ] 10.6 Manual: re-recognize + inventory
-- [ ] 10.7 Manual: bead / XHS / login regression
+- [x] 10.3 Manual: watermark sheet flow
+- [x] 10.4 Manual: clean sheet → no uncertain → done
+- [x] 10.5 Manual: Phase 3 skip
+- [x] 10.6 Manual: re-recognize + inventory
+- [x] 10.7 Manual: bead / XHS / login regression
+
+## Validation Evidence (2026-07-29)
+
+- `npm run build` passed. Wrangler emitted a read-only debug-log warning for
+  `/root/.config/.wrangler/logs`, but Vite built both Worker and client bundles and
+  the command exited successfully.
+- `npm run lint` passed with only three pre-existing warnings under
+  `.pi/extensions/trellis/`.
+- Watermark sample `pics/test_inputs_1.jpg`: auto split at 89.8%, pattern-mined
+  fallback candidates shown, palette reduced and supplemented to the 29 visible
+  legend codes, pixel fallback produced 10 uncertain clusters, cluster selection
+  changed the Canvas output, all clusters could be assigned and corrections applied.
+- Phase 3 skip generated a final result; 「重新识别」 returned to palette confirmation
+  and re-extracted candidates.
+- Browser-generated clean local PNG: auto split at 74.8%, extracted A4/C6/F15/H7,
+  then reached done directly with no uncertain phase.
+- Network observation during uploads/recognition showed only local `blob:` reads and
+  no image/API upload.
+- Bead, XHS, and login surfaces rendered; switching tabs preserved the workshop
+  result. Login route rendered at `/login`.
+- With browser-local mocked session/inventory responses, start locked the four-code
+  usage snapshot; re-recognize kept the active session and end controls visible;
+  mocked deduct completed, cleared the session, and showed 「扣减完成」.
 
 ## Risky Files / Rollback Points
 
