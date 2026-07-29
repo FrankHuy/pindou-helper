@@ -1,0 +1,5 @@
+{"file": ".trellis/spec/frontend/workshop.md", "reason": "Workshop pipeline invariants, highlight contracts, inventory start/finish integration, re-recognize rules"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "Shell vs feature tabs, keep-alive mount, workshop own upload, styling conventions"}
+{"file": ".trellis/spec/frontend/state-management.md", "reason": "Workshop state categories, analyze generation token, inventory state in shell"}
+{"file": ".trellis/spec/frontend/directory-structure.md", "reason": "Import boundaries: workshop → lib/workshop + color-match + palettes; no React in lib"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "Forbidden patterns: no new deps, no OCR, no upload, Chinese UI, screen-color disclaimer"}

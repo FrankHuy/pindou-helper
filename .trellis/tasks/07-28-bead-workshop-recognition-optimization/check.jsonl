@@ -1,0 +1,5 @@
+{"file": ".trellis/spec/frontend/workshop.md", "reason": "Verify: local-only invariants, grid→pixel fallback, highlight single-code, re-recognize rules, inventory start/finish"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "Verify: no new deps, no upload, Chinese UI, screen-color disclaimer, no dual colorDistance"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "Verify: keep-alive mount, workshop own upload, no inline styles except dynamic colors"}
+{"file": ".trellis/spec/frontend/state-management.md", "reason": "Verify: generation token for analyze, state categories match new phase state machine"}
+{"file": ".trellis/spec/frontend/directory-structure.md", "reason": "Verify: import boundaries, lib/workshop no React, feature/workshop no lib/pattern generate"}
