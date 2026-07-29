@@ -17,7 +17,9 @@ import {
   type WorkshopAnalyzeOutput,
   type WorkshopPhase,
 } from '../../lib/workshop/analyze'
+import { workshopResultFromGeneratedPattern } from '../../lib/workshop/from-pattern'
 import { drawPattern, HIGHLIGHT_DIM_ALPHA } from '../../lib/pattern'
+import type { BeadPattern } from '../../lib/pattern'
 import type { PublicUser } from '../auth/authApi'
 import type {
   InventorySnapshot,
@@ -37,11 +39,20 @@ import './workshop.css'
 
 const ACCEPT = 'image/png,image/jpeg,image/webp,image/*'
 
+export type WorkshopImportRequest = {
+  /** Monotonic token so the same pattern can be re-imported */
+  token: number
+  pattern: BeadPattern
+}
+
 type BeadWorkshopTabProps = {
   sessionUser: PublicUser | null
   inventory: InventorySnapshot | null
   onInventoryDeducted: (snapshot: InventorySnapshot) => void
   onLogin: () => void
+  /** Injected from bead generate tab — skip upload + palette confirm */
+  importRequest?: WorkshopImportRequest | null
+  onImportConsumed?: () => void
 }
 
 export default function BeadWorkshopTab({
@@ -49,6 +60,8 @@ export default function BeadWorkshopTab({
   inventory,
   onInventoryDeducted,
   onLogin,
+  importRequest = null,
+  onImportConsumed,
 }: BeadWorkshopTabProps) {
   const [fileName, setFileName] = useState('')
   const [sourceUrl, setSourceUrl] = useState('')
@@ -75,6 +88,8 @@ export default function BeadWorkshopTab({
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [dragging, setDragging] = useState(false)
+  /** True when result came from bead generate inject (no upload source) */
+  const [fromGenerated, setFromGenerated] = useState(false)
 
   // Inventory integration
   const [activeSession, setActiveSession] = useState<InventoryUsageSnapshot | null>(null)
@@ -123,6 +138,50 @@ export default function BeadWorkshopTab({
       if (sourceUrl) URL.revokeObjectURL(sourceUrl)
     }
   }, [sourceUrl])
+
+  // Inject generated pattern from bead tab → phase done (no palette / recognize)
+  useEffect(() => {
+    if (!importRequest) return
+    const { pattern } = importRequest
+    ++analyzeGenRef.current
+
+    if (sourceUrl) {
+      URL.revokeObjectURL(sourceUrl)
+      setSourceUrl('')
+    }
+    setFileName('')
+    setImageData(null)
+    setFromGenerated(true)
+    setCandidates([])
+    setConfirmedPalette([])
+    setRecognition(null)
+    setClusters([])
+    setAssignments({})
+    setSelectedClusterId(null)
+    setHighlightCode(null)
+    setError('')
+    setBusy(false)
+    setLegendFallback(false)
+    // New sheet: clear inventory session like a fresh upload
+    setActiveSession(null)
+    setShortageItems([])
+    setDeductResult(null)
+    setDeductLowStock([])
+
+    try {
+      const output = workshopResultFromGeneratedPattern(pattern)
+      setResult(output)
+      setPhase('done')
+    } catch (err) {
+      setResult(null)
+      setPhase('idle')
+      setError(err instanceof Error ? err.message : '无法载入生成图纸')
+    }
+
+    onImportConsumed?.()
+    // Only re-run when token changes; onImportConsumed identity is not required
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [importRequest?.token])
 
   // ---- Phase 1: extract legend ----
 
@@ -210,6 +269,7 @@ export default function BeadWorkshopTab({
     const url = URL.createObjectURL(file)
     setSourceUrl(url)
     setFileName(file.name)
+    setFromGenerated(false)
     setResult(null)
     setHighlightCode(null)
     setError('')
@@ -533,10 +593,12 @@ export default function BeadWorkshopTab({
             </label>
             {fileName ? (
               <p className="workshop-hint">已选：{fileName}</p>
+            ) : fromGenerated ? (
+              <p className="workshop-hint">当前图纸来自「拼豆图纸」生成，未上传源图。</p>
             ) : (
               <p className="workshop-hint">
                 支持本工具导出的「上图下图例」PNG，以及同类第三方图纸（png / jpg /
-                webp）。图片仅在本地处理。
+                webp）。图片仅在本地处理。也可在生成页点「开始拼图」直接载入。
               </p>
             )}
           </div>
@@ -984,12 +1046,18 @@ export default function BeadWorkshopTab({
           </div>
 
           <div className="workshop-stage">
-            {!sourceUrl && (
+            {!sourceUrl && !fromGenerated && (
               <div className="workshop-empty">
                 <strong>拼豆工作间</strong>
                 <span>
-                  上传已有拼豆图纸，按色号高亮分批拼豆。与「拼豆图纸」生成功能互补。
+                  上传已有拼豆图纸，按色号高亮分批拼豆。与「拼豆图纸」生成功能互补；也可在生成后点「开始拼图」直达此处。
                 </span>
+              </div>
+            )}
+            {!sourceUrl && fromGenerated && phase === 'done' && !showCanvas && (
+              <div className="workshop-empty">
+                <strong>来自生成</strong>
+                <span>已载入生成图纸。可在左侧按色高亮，或上传其他图纸重新识别。</span>
               </div>
             )}
             {sourceUrl && phase === 'palette' && !busy && (

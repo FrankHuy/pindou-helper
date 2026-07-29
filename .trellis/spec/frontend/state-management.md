@@ -88,10 +88,13 @@ const generationRef = useRef(0)
 | `splitRatio` / `splitY` | Auto estimate + user drag |
 | `candidates` / `confirmedPalette` | Phase 1 editable legend palette |
 | `recognition` / `clusters` / `assignments` | Phase 2–3 uncertain resolution |
-| `result` | Final `WorkshopAnalyzeOutput` only after corrections / skip / no-uncertain |
+| `result` | Final `WorkshopAnalyzeOutput` only after corrections / skip / no-uncertain / **generate inject** |
+| `fromGenerated` | Result came from bead tab inject (no upload source) |
 | `highlightCode` | Single-code dim highlight on **done** result |
 | `analyzeGenRef` | Discard stale legend extract / recognize |
 | `activeSession` | Locked inventory usage; survives re-recognize |
+
+App shell may pass `importRequest: { token, pattern }` + `onImportConsumed`. On token change, workshop builds result via `workshopResultFromGeneratedPattern` and jumps to `done` (clears active inventory session like a new upload).
 
 Upload / split **pointerup** / 「重新识别」 → Phase 1 legend extract only — not every `pointermove`, and not auto Phase 2. Inventory start uses final `result` at `phase === 'done'`; keep inventory UI if `activeSession` or `deductResult` while re-confirming palette.
 

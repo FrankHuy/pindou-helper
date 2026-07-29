@@ -80,6 +80,13 @@ input[type="range"] { width: 100%; accent-color: #1d574b; }
 .toggle-row input { width: 18px; height: 18px; accent-color: #1d574b; }
 .download-button { width: 100%; min-height: 42px; border: 0; background: #1d574b; color: #fff; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
 .download-button span { font-size: 20px; }
+.bead-export-actions { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+.workshop-jump-button { background: #1d574b; }
+.secondary-download {
+  background: #fff;
+  color: #1d574b;
+  border: 1px solid #1d574b;
+}
 
 .stage-panel { min-width: 0; display: flex; flex-direction: column; }
 .stage-toolbar { min-height: 52px; padding: 8px 14px; display: flex; align-items: center; justify-content: space-between; background: #f9faf8; border-bottom: 1px solid #dfe2dd; gap: 12px; }

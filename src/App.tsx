@@ -11,6 +11,7 @@ import PrivacyPage from './features/info/PrivacyPage'
 import './features/info/info.css'
 import BeadAiPanel from './features/bead/BeadAiPanel'
 import BeadWorkshopTab from './features/workshop/BeadWorkshopTab'
+import type { WorkshopImportRequest } from './features/workshop/BeadWorkshopTab'
 import InventoryTab from './features/inventory/InventoryTab'
 import type { InventorySnapshot } from './lib/inventory/types'
 import { fetchInventory } from './features/inventory/inventoryApi'
@@ -136,6 +137,8 @@ function App() {
   const [authRefresh, setAuthRefresh] = useState(0)
   const [sessionUser, setSessionUser] = useState<PublicUser | null>(null)
   const [tab, setTab] = useState<AppTab>('bead')
+  const [workshopImport, setWorkshopImport] = useState<WorkshopImportRequest | null>(null)
+  const workshopImportTokenRef = useRef(0)
   const [file, setFile] = useState<File | null>(null)
   const [imageUrl, setImageUrl] = useState('')
   const [targetWidth, setTargetWidth] = useState(48)
@@ -863,9 +866,29 @@ function App() {
           </div>
 
           {pattern && (
-            <button className="download-button" onClick={() => exportPattern(pattern, showCodes)}>
-              <DownloadIcon /> 导出 PNG
-            </button>
+            <div className="bead-export-actions">
+              <button
+                type="button"
+                className="download-button workshop-jump-button"
+                onClick={() => {
+                  workshopImportTokenRef.current += 1
+                  setWorkshopImport({
+                    token: workshopImportTokenRef.current,
+                    pattern,
+                  })
+                  setTab('workshop')
+                }}
+              >
+                开始拼图
+              </button>
+              <button
+                type="button"
+                className="download-button secondary-download"
+                onClick={() => exportPattern(pattern, showCodes)}
+              >
+                <DownloadIcon /> 导出 PNG
+              </button>
+            </div>
           )}
         </aside>
 
@@ -1060,6 +1083,8 @@ function App() {
           inventory={inventory}
           onInventoryDeducted={handleInventoryMutated}
           onLogin={() => navigateShell('login')}
+          importRequest={workshopImport}
+          onImportConsumed={() => setWorkshopImport(null)}
         />
       </section>
 

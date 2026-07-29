@@ -6,7 +6,8 @@
 
 ## 1. Scope / Trigger
 
-- Trigger: user uploads a PNG/JPG/WebP sheet in the workshop tab.
+- Trigger A: user uploads a PNG/JPG/WebP sheet in the workshop tab.
+- Trigger B: bead generate tab 「开始拼图」 injects in-memory `BeadPattern` via App shell props (`importRequest`) — **no download / re-upload / re-recognize**.
 - Layers: `src/features/workshop/*` (UI) ↔ `src/lib/workshop/*` (pure analyze) ↔ `src/lib/color-match.ts` + `src/lib/pattern.ts` (`drawPattern`).
 - Privacy: full browser Canvas / ImageData; **never** upload the sheet; no OCR libs; no new runtime deps.
 
@@ -37,6 +38,10 @@ UI drives a phase machine: `idle → palette → recognizing → uncertain | don
 
 `analyzeWorkshopFile` / `analyzeWorkshopImageData` still auto-accept all legend candidates and treat far-from-palette as empty (original empty rule A). Interactive UI does **not** call them.
 
+### Generate-tab direct import
+
+`workshopResultFromGeneratedPattern(pattern)` builds a final `WorkshopAnalyzeOutput` (`mode: 'grid'`) from the live `BeadPattern`. UI sets `phase = 'done'` immediately (skip palette / uncertain). No real source image → no split line / 「重新识别」 until user uploads. Inventory start/finish still use `result.colors`.
+
 ---
 
 ## 3. Signatures
@@ -48,6 +53,9 @@ recognizePattern(image, splitY, confirmedPalette, legendFallback?): RecognitionW
 applyCorrections(recognition, assignments, clusters, confirmedPalette): WorkshopAnalyzeOutput
 clusterUncertainColors(samples, maxK = 10): UncertainCluster[]
 drawUncertainHighlight(canvas, recognition, clusters, selectedClusterId, zoom, dimAlpha?)
+
+// src/lib/workshop/from-pattern.ts — generate tab inject
+workshopResultFromGeneratedPattern(pattern: BeadPattern): WorkshopAnalyzeOutput
 
 // Backward compat
 analyzeWorkshopFile(file, fullPalette, splitY?): Promise<WorkshopAnalyzeOutput>
