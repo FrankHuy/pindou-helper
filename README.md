@@ -30,6 +30,16 @@
 - 点击放大后逐张保存（同源 Worker 代理，带 Referer；HEIC 等会纠正 Content-Type）
 - 不支持私密帖、登录态或 ZIP 打包
 
+命令行（本机 Python，不经过 Worker）：
+
+```bash
+python3 scripts/download_share.py '<分享文本或URL>' -o /tmp/out --jpg
+```
+
+- 小红书默认直连公开页 `fileId` → `sns-img-bd` 原图；`--jpg` 走 `ci.xiaohongshu.com/{fileId}?imageView2/format/jpg`（同像素 JPEG，大图常 7MB+）
+- 非小红书链接会依次尝试 KuKuTool / BugPk（机房 IP 上 KuKuTool 常被标 `auto_script`）
+- 仅用于公开且你有权保存的素材。依赖：`requests`、`cryptography`、可选 `Pillow`
+
 ## 本地开发
 
 ```bash
