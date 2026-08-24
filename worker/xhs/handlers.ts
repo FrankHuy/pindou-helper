@@ -1,7 +1,6 @@
 import { isAllowedShareTarget, normalizeImageUrl, parseShareUrl } from './allowlist'
 import {
   findNote,
-  highestImageUrl,
   jpgUrlFromFileId,
   resolveImageSourceUrl,
   resolveToken,
@@ -159,28 +158,17 @@ export async function parseNote(request: Request, env: ParseEnv = {}): Promise<R
     const image = note.imageList[i]
     const token = resolveToken(image)
 
-    // Prefer bare original from token; if that URL fails allowlist normalize,
-    // try public-page derivative. Skip only when both fail.
-    const candidates: string[] = []
-    try {
-      candidates.push(resolveImageSourceUrl(image))
-    } catch {
-      // no usable source from token or infoList
-    }
-    // When token won, still queue public-page URL so normalize failure can recover.
+    // Default: original CDN from fileId/token only. Do not fall back to
+    // WB_DFT / urlDefault — those are ~1080p web thumbnails.
+    let sourceUrl: string | null = null
     if (token) {
       try {
-        candidates.push(highestImageUrl(image))
+        sourceUrl = resolveImageSourceUrl(image)
       } catch {
-        // no public-page derivative either
+        sourceUrl = null
       }
     }
-
-    let normalized: URL | null = null
-    for (const raw of candidates) {
-      normalized = normalizeHttpsCandidate(raw)
-      if (normalized) break
-    }
+    const normalized = sourceUrl ? normalizeHttpsCandidate(sourceUrl) : null
     if (!normalized) continue
 
     const item: XhsImageItem = {

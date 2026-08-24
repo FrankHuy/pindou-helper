@@ -25,7 +25,7 @@
 ### 小红书下图
 
 - 粘贴公开图文分享链接（`xiaohongshu.com` / `xhslink.com`）
-- 解析帖内高清图并网格预览；有 `fileId`/可抽 token 时默认裸 `sns-img-bd` 原图，失败则回退公开页展示档
+- 解析帖内高清图并网格预览；有 `fileId`/可抽 token 时默认裸 `sns-img-bd` 原图，**不回退**公开页 `WB_DFT` 展示档（那是约 1080p 缩略图）
 - 可选「兼容 JPG」开关：同 token 的 CDN `imageView2` JPG（非 WB_DFT），便于预览/部分设备保存
 - 点击放大后逐张保存（同源 Worker 代理，带 Referer；HEIC 等会纠正 Content-Type）
 - 不支持私密帖、登录态或 ZIP 打包
@@ -33,12 +33,15 @@
 命令行（本机 Python，不经过 Worker）：
 
 ```bash
-python3 scripts/download_share.py '<分享文本或URL>' -o /tmp/out --jpg
+python3 scripts/download_share.py '<分享文本或URL>' -o /tmp/xhs-<slug> --jpg
 ```
 
-- 小红书默认直连公开页 `fileId` → `sns-img-bd` 原图；`--jpg` 走 `ci.xiaohongshu.com/{fileId}?imageView2/format/jpg`（同像素 JPEG，大图常 7MB+）
-- 非小红书链接会依次尝试 KuKuTool / BugPk（机房 IP 上 KuKuTool 常被标 `auto_script`）
+- 小红书默认直连公开页 `fileId` → `sns-img-bd` 原图（跳过封面/预览档 ≤1080px；`--include-covers` 才保留）。`--jpg` 走 `ci.xiaohongshu.com/{fileId}?imageView2/format/jpg`（同像素 JPEG）。部分笔记 `fileId` 带 `notes_pre_post/` 前缀，斜杠必须保留，去掉会 404。不要下载 `WB_DFT` / `urlDefault` 网页压缩图。
+- `-o` 请用 `/tmp/xhs-<slug>` 或 `/tmp/share-<slug>`（省略 `-o` 则默认 `/tmp/share-{标题}`），这样本机 Hermes 清理任务才会回收。
+- 抖音图文（`v.douyin.com` / `douyin.com` / `iesdouyin.com`）直连公开分享页，选无水印 `url_list` / `img_bitrate` 的 `~q80.jpeg`，不走 KuKuTool。`--backend douyin` 可强制。
+- 其他非小红书链接会依次尝试 KuKuTool / BugPk（机房 IP 上 KuKuTool 常被标 `auto_script`）
 - 仅用于公开且你有权保存的素材。依赖：`requests`、`cryptography`、可选 `Pillow`
+- 可选清理：`python3 scripts/cleanup_share_downloads.py --dry-run`（只删 `/tmp/xhs-*` 与 `/tmp/share-*`，不动 `pics/`）
 
 ## 本地开发
 

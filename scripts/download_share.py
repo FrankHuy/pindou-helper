@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
-"""Download public share-link media (Xiaohongshu original CDN + KuKuTool + BugPk).
+"""Download public share-link media (Xiaohongshu + Douyin public pages + fallbacks).
 
 Backends
-  auto      Xiaohongshu/xhslink → original sns-img-bd CDN; otherwise KuKuTool
+  auto      Xiaohongshu → original CDN; Douyin → public share page; else KuKuTool
   xhs       Direct original-quality images from the public note page
+  douyin    Direct images from the public Douyin share page (no watermark)
   kukutool  dy.kukutool.com encrypted parse API (watermark-free, 130+ sites)
   bugpk     api.bugpk.com plaintext fallback (no encryption)
 
 Usage
-  python3 download_share.py '<share-url-or-copied-text>' [-o DIR] [--backend auto] [--jpg]
+  python3 download_share.py '<share-url-or-copied-text>' [-o DIR] [--backend auto] [--jpg] [--include-covers]
   python3 download_share.py --help
 
 This script only fetches media the public page / third-party parser already
@@ -45,9 +46,15 @@ CHROME_UA = (
 )
 
 XHS_HOSTS = ("xiaohongshu.com", "xhslink.com", "xhslink.cn", "rednote.com")
+DOUYIN_HOSTS = ("douyin.com", "iesdouyin.com")
 ORIGINAL_CDN_HOST = "sns-img-bd.xhscdn.com"
 CI_HOST = "ci.xiaohongshu.com"
-FILE_ID_RE = re.compile(r"^[A-Za-z0-9_-]+$")
+DOUYIN_MOBILE_UA = (
+    "Mozilla/5.0 (Linux; Android 11; SAMSUNG SM-G973U) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) SamsungBrowser/14.2 Chrome/87.0.4280.141 Mobile Safari/537.36"
+)
+# Bare tokens, or CDN path prefixes such as notes_pre_post/<token>.
+FILE_ID_RE = re.compile(r"^[A-Za-z0-9_-]+(?:/[A-Za-z0-9_-]+)*$")
 
 # KuKuTool (dy.kukutool.com) — reverse-engineered from videodl + site JS
 KUKU_BASE = "https://dy.kukutool.com"
@@ -106,6 +113,11 @@ def extract_url(text: str) -> str:
 def is_xhs_url(url: str) -> bool:
     host = (urlparse(url).hostname or "").lower()
     return any(host == h or host.endswith("." + h) for h in XHS_HOSTS)
+
+
+def is_douyin_url(url: str) -> bool:
+    host = (urlparse(url).hostname or "").lower()
+    return any(host == h or host.endswith("." + h) for h in DOUYIN_HOSTS)
 
 
 def sanitize_filename(text: str, default: str = "note") -> str:
@@ -246,7 +258,9 @@ def is_valid_file_id(file_id: object) -> bool:
     if not isinstance(file_id, str):
         return False
     token = file_id.strip()
-    return bool(token) and not re.search(r"[/?#\s]", token) and bool(FILE_ID_RE.match(token))
+    if not token or ".." in token or re.search(r"[?#\s]", token):
+        return False
+    return bool(FILE_ID_RE.match(token))
 
 
 def extract_file_id_from_url(raw_url: str) -> str | None:
@@ -290,7 +304,7 @@ def xhs_resolve_token(image: dict) -> str | None:
 
 
 def xhs_media_url(file_id: str, prefer_jpg: bool) -> str:
-    token = quote(file_id.strip(), safe="")
+    token = quote(file_id.strip(), safe="/")
     if prefer_jpg:
         # Same pixel dimensions as the original, JPEG-encoded. For large
         # notes this is often the 7MB+ file users expect from third-party
@@ -299,7 +313,35 @@ def xhs_media_url(file_id: str, prefer_jpg: bool) -> str:
     return f"https://{ORIGINAL_CDN_HOST}/{token}"
 
 
-def parse_xhs(session: requests.Session, share_url: str, prefer_jpg: bool = False) -> dict[str, Any]:
+# Cover / grid thumbs on image notes are typically 1000–1080px when the same
+# note also has large originals. Never treat WB_DFT (~1080p web derivative) as
+# the download target — that is the thumbnail, not the original.
+COVER_MAX_EDGE = 1080
+ORIGINAL_MIN_EDGE = 1600
+
+
+def xhs_is_cover_or_thumb(image: dict, images: list) -> bool:
+    """True for cover cards / preview tiles when the note also has large originals."""
+    edge = max(int(image.get("width") or 0), int(image.get("height") or 0))
+    if not edge:
+        return False
+    note_max = 0
+    for sibling in images:
+        if isinstance(sibling, dict):
+            note_max = max(
+                note_max,
+                int(sibling.get("width") or 0),
+                int(sibling.get("height") or 0),
+            )
+    return note_max >= ORIGINAL_MIN_EDGE and edge <= COVER_MAX_EDGE
+
+
+def parse_xhs(
+    session: requests.Session,
+    share_url: str,
+    prefer_jpg: bool = False,
+    include_covers: bool = False,
+) -> dict[str, Any]:
     page = session.get(
         share_url,
         headers={
@@ -314,8 +356,12 @@ def parse_xhs(session: requests.Session, share_url: str, prefer_jpg: bool = Fals
     title = note.get("title") or note.get("desc") or "untitled"
     images = note.get("imageList") or []
     pics: list[str] = []
+    skipped_covers = 0
     for image in images:
         if not isinstance(image, dict):
+            continue
+        if not include_covers and xhs_is_cover_or_thumb(image, images):
+            skipped_covers += 1
             continue
         token = xhs_resolve_token(image)
         if token:
@@ -340,7 +386,202 @@ def parse_xhs(session: requests.Session, share_url: str, prefer_jpg: bool = Fals
         "url": video_url,
         "cover": "",
         "pics": pics,
+        "skipped_covers": skipped_covers,
         "raw_note_keys": sorted(note.keys())[:20],
+    }
+
+
+# ---------------------------------------------------------------------------
+# Douyin public share-page path (no KuKuTool)
+# ---------------------------------------------------------------------------
+
+def _balanced_json_object(text: str, start: int) -> str:
+    """Slice a JSON object starting at `start` (must point at '{')."""
+    if start < 0 or start >= len(text) or text[start] != "{":
+        raise RuntimeError("JSON object start not found.")
+    depth = 0
+    in_string: str | None = None
+    escaped = False
+    for i in range(start, len(text)):
+        ch = text[i]
+        if in_string:
+            if escaped:
+                escaped = False
+            elif ch == "\\":
+                escaped = True
+            elif ch == in_string:
+                in_string = None
+            continue
+        if ch in "\"'":
+            in_string = ch
+        elif ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0:
+                return text[start : i + 1]
+    raise RuntimeError("Unbalanced JSON object.")
+
+
+def douyin_router_from_page(page: str) -> dict[str, Any]:
+    match = re.search(r"window\._ROUTER_DATA\s*=\s*(\{)", page)
+    if not match:
+        raise RuntimeError("Douyin page has no window._ROUTER_DATA (login wall or unavailable).")
+    payload = _balanced_json_object(page, match.start(1))
+    payload = payload.replace("\\u002F", "/")
+    payload = re.sub(r":undefined(?=[,}])", ":null", payload)
+    return json.loads(payload)
+
+
+def douyin_find_item(router: dict[str, Any]) -> dict[str, Any]:
+    loader = router.get("loaderData") or {}
+    if not isinstance(loader, dict):
+        raise RuntimeError("Douyin _ROUTER_DATA.loaderData missing.")
+    for key, blob in loader.items():
+        if not isinstance(blob, dict):
+            continue
+        video_info = blob.get("videoInfoRes") or blob.get("itemInfo") or {}
+        if not isinstance(video_info, dict):
+            continue
+        items = video_info.get("item_list") or []
+        if not items and isinstance(video_info.get("itemStruct"), dict):
+            items = [video_info["itemStruct"]]
+        if isinstance(items, list) and items and isinstance(items[0], dict):
+            item = items[0]
+            images = item.get("images") or []
+            if isinstance(images, list) and images:
+                return item
+    raise RuntimeError("Douyin share page has no image-note item (video-only or empty).")
+
+
+def _douyin_url_score(url: str) -> int:
+    """Prefer unsigned-looking original JPEG over watermarked / shrunk variants.
+
+    Live check (v.douyin.com/CHEV1tpvfx4/, 7 images, 2160-wide originals):
+      images[].url_list  ~tplv-dy-lqen-new:1440:H:q80.jpeg  → 1440px, ~256–750 KB
+      img_bitrate[]      ~q80.jpeg                          → 2160px, ~480 KB JPEG / ~204 KB webp
+      download_url_list  ~tplv-dy-lqen-new-water:...        → watermarked, skip
+      tplv-dy-shrink                                        → 480/960 preview, skip
+    """
+    path = url.split("?", 1)[0].lower()
+    if "-water" in path or "lqen-new-water" in path:
+        return -100
+    if "shrink" in path or "resize" in path:
+        return -50
+    score = 0
+    if re.search(r"~q80\.jpeg$", path) or re.search(r"~q\d+\.jpeg$", path):
+        score += 80
+    elif re.search(r"~q80\.webp$", path) or re.search(r"~q\d+\.webp$", path):
+        score += 60
+    elif "lqen-new" in path and path.endswith(".jpeg"):
+        score += 40
+    elif "lqen-new" in path:
+        score += 20
+    elif path.endswith(".jpeg") or path.endswith(".jpg"):
+        score += 30
+    elif path.endswith(".webp"):
+        score += 10
+    return score
+
+
+def _douyin_collect_urls_for_uri(item: dict[str, Any], uri: str) -> list[str]:
+    urls: list[str] = []
+    for image in item.get("images") or []:
+        if isinstance(image, dict) and image.get("uri") == uri:
+            urls.extend(u for u in (image.get("url_list") or []) if isinstance(u, str))
+    for gear in item.get("img_bitrate") or []:
+        if not isinstance(gear, dict):
+            continue
+        for image in gear.get("images") or []:
+            if isinstance(image, dict) and image.get("uri") == uri:
+                urls.extend(u for u in (image.get("url_list") or []) if isinstance(u, str))
+    seen: set[str] = set()
+    unique: list[str] = []
+    for url in urls:
+        if url and url not in seen:
+            seen.add(url)
+            unique.append(url)
+    return unique
+
+
+def douyin_pick_best_url(item: dict[str, Any], image: dict[str, Any]) -> str:
+    uri = image.get("uri") or ""
+    candidates = _douyin_collect_urls_for_uri(item, uri) if uri else []
+    if not candidates:
+        candidates = [u for u in (image.get("url_list") or []) if isinstance(u, str)]
+    ranked = sorted(candidates, key=_douyin_url_score, reverse=True)
+    if not ranked or _douyin_url_score(ranked[0]) < 0:
+        raise RuntimeError(f"No watermark-free Douyin image URL for uri={uri!r}")
+    return ranked[0]
+
+
+def parse_douyin(session: requests.Session, share_url: str) -> dict[str, Any]:
+    headers = {
+        "User-Agent": DOUYIN_MOBILE_UA,
+        "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    }
+    page = session.get(share_url, headers=headers, timeout=30, allow_redirects=True)
+    page.raise_for_status()
+    canonical = str(page.url)
+    html_text = page.text
+
+    # iesdouyin.com/share/note/{id} is often a layout shell. Follow to
+    # /share/video/{id} or www.douyin.com/share/note/{id} which carry images.
+    if "window._ROUTER_DATA" not in html_text or "item_list" not in html_text:
+        aweme_id = ""
+        m = re.search(r"/(?:share/)?(?:video|note|slides)/(\d{15,})", canonical)
+        if not m:
+            m = re.search(r"/(?:share/)?(?:video|note|slides)/(\d{15,})", html_text)
+        if m:
+            aweme_id = m.group(1)
+        if aweme_id:
+            for alt in (
+                f"https://www.iesdouyin.com/share/video/{aweme_id}",
+                f"https://www.douyin.com/share/note/{aweme_id}",
+                f"https://www.iesdouyin.com/share/slides/{aweme_id}",
+            ):
+                if alt.rstrip("/") == canonical.rstrip("/"):
+                    continue
+                alt_page = session.get(alt, headers=headers, timeout=30, allow_redirects=True)
+                if alt_page.status_code == 200 and "item_list" in alt_page.text:
+                    html_text = alt_page.text
+                    canonical = str(alt_page.url)
+                    break
+
+    router = douyin_router_from_page(html_text)
+    item = douyin_find_item(router)
+    images = item.get("images") or []
+    pics: list[str] = []
+    seen_uri: set[str] = set()
+    for image in images:
+        if not isinstance(image, dict):
+            continue
+        uri = image.get("uri") or ""
+        if uri and uri in seen_uri:
+            continue
+        if uri:
+            seen_uri.add(uri)
+        pics.append(douyin_pick_best_url(item, image))
+
+    video_url = ""
+    video = item.get("video") if isinstance(item.get("video"), dict) else {}
+    play = (video or {}).get("play_addr") or {}
+    if isinstance(play, dict):
+        for u in play.get("url_list") or []:
+            if isinstance(u, str) and u:
+                video_url = u.replace("playwm", "play")
+                break
+
+    return {
+        "backend": "douyin",
+        "title": (item.get("desc") or "").strip(),
+        "canonical": canonical,
+        "aweme_id": item.get("aweme_id") or item.get("group_id_str") or "",
+        "url": video_url if not pics else "",
+        "cover": "",
+        "pics": pics,
+        "raw_item_keys": sorted(item.keys())[:24],
     }
 
 
@@ -597,10 +838,16 @@ def download_one(
 
 
 def parse_with_backend(
-    session: requests.Session, url: str, backend: str, prefer_jpg: bool = False
+    session: requests.Session,
+    url: str,
+    backend: str,
+    prefer_jpg: bool = False,
+    include_covers: bool = False,
 ) -> dict[str, Any]:
     if backend == "xhs":
-        return parse_xhs(session, url, prefer_jpg=prefer_jpg)
+        return parse_xhs(session, url, prefer_jpg=prefer_jpg, include_covers=include_covers)
+    if backend == "douyin":
+        return parse_douyin(session, url)
     if backend == "kukutool":
         return parse_kukutool(session, url)
     if backend == "bugpk":
@@ -609,9 +856,16 @@ def parse_with_backend(
         errors: list[str] = []
         if is_xhs_url(url):
             try:
-                return parse_xhs(session, url, prefer_jpg=prefer_jpg)
+                return parse_xhs(
+                    session, url, prefer_jpg=prefer_jpg, include_covers=include_covers
+                )
             except Exception as exc:
                 errors.append(f"xhs: {exc}")
+        if is_douyin_url(url):
+            try:
+                return parse_douyin(session, url)
+            except Exception as exc:
+                errors.append(f"douyin: {exc}")
         try:
             return parse_kukutool(session, url)
         except Exception as exc:
@@ -630,7 +884,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("-o", "--output", default="", help="Output directory")
     parser.add_argument(
         "--backend",
-        choices=("auto", "xhs", "kukutool", "bugpk"),
+        choices=("auto", "xhs", "douyin", "kukutool", "bugpk"),
         default="auto",
         help="Parser backend (default: auto)",
     )
@@ -639,11 +893,22 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Xiaohongshu: request JPEG via ci.xiaohongshu.com (often 7MB+ for large notes)",
     )
+    parser.add_argument(
+        "--include-covers",
+        action="store_true",
+        help="Xiaohongshu: also save cover/preview tiles (≤1080px). Default skips them.",
+    )
     args = parser.parse_args(argv)
 
     share_url = extract_url(args.url)
     session = new_session()
-    parsed = parse_with_backend(session, share_url, args.backend, prefer_jpg=args.jpg)
+    parsed = parse_with_backend(
+        session,
+        share_url,
+        args.backend,
+        prefer_jpg=args.jpg,
+        include_covers=args.include_covers,
+    )
 
     title = parsed.get("title") or "untitled"
     dest = Path(args.output) if args.output else Path("/tmp") / f"share-{sanitize_filename(title)}"
@@ -655,7 +920,12 @@ def main(argv: list[str] | None = None) -> int:
         print("No media URLs in parse result.", file=sys.stderr)
         return 2
 
-    referer = "https://www.xiaohongshu.com/" if is_xhs_url(share_url) else f"{KUKU_BASE}/"
+    if is_xhs_url(share_url):
+        referer = "https://www.xiaohongshu.com/"
+    elif is_douyin_url(share_url) or parsed.get("backend") == "douyin":
+        referer = "https://www.douyin.com/"
+    else:
+        referer = f"{KUKU_BASE}/"
     results = []
     for i, (kind, media_url) in enumerate(media, 1):
         info = download_one(session, media_url, dest, i, kind, referer)
@@ -674,6 +944,7 @@ def main(argv: list[str] | None = None) -> int:
         "count": len(results),
         "output": str(dest),
         "largest_bytes": max(r["bytes"] for r in results),
+        "skipped_covers": parsed.get("skipped_covers") or 0,
         "files": results,
     }
     (dest / "manifest.json").write_text(
@@ -682,6 +953,9 @@ def main(argv: list[str] | None = None) -> int:
     print(f"\nTitle : {title}")
     print(f"Backend: {parsed.get('backend')}")
     print(f"Saved : {len(results)} file(s) → {dest}")
+    skipped = summary["skipped_covers"]
+    if skipped:
+        print(f"Skipped covers/thumbs: {skipped} (pass --include-covers to keep them)")
     print(f"Largest: {summary['largest_bytes']:,} bytes ({summary['largest_bytes'] / 1048576:.2f} MB)")
     return 0
 

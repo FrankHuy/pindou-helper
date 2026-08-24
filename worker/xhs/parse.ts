@@ -10,7 +10,8 @@ const INITIAL_STATE_RE = /window\.__INITIAL_STATE__\s*=\s*(\{[\s\S]*?\})\s*<\/sc
 /** Default original-quality CDN host (matches XHS-Downloader / finalized HD script). */
 export const ORIGINAL_CDN_HOST = 'sns-img-bd.xhscdn.com'
 
-const FILE_ID_RE = /^[A-Za-z0-9_-]+$/
+/** Bare tokens, or CDN path prefixes such as notes_pre_post/<token>. */
+const FILE_ID_RE = /^[A-Za-z0-9_-]+(?:\/[A-Za-z0-9_-]+)*$/
 
 /** Decode HTML entities used in the embedded state payload. */
 function htmlUnescape(value: string): string {
@@ -67,7 +68,10 @@ export function findNote(state: unknown): NoteRecord {
   throw new Error('NOTE_NOT_FOUND')
 }
 
-/** Prefer WB_DFT / original-style URL over preview derivatives. */
+/**
+ * Last-resort page URL. WB_DFT / urlDefault are compressed ~1080p web
+ * derivatives (thumbnails), not originals. Prefer token → sns-img-bd.
+ */
 export function highestImageUrl(image: NoteImage): string {
   const info = image.infoList ?? []
   for (const preferred of ['WB_DFT', 'WB_ORI', 'WB_HQ', 'WB_PRV'] as const) {
@@ -89,8 +93,8 @@ export function isValidFileId(fileId: unknown): fileId is string {
   if (typeof fileId !== 'string') return false
   const id = fileId.trim()
   if (!id) return false
-  // Block path / query injection even on allowlisted hosts.
-  if (/[/?#\s]/.test(id)) return false
+  // Allow a single CDN prefix (notes_pre_post/<token>) but block `..`, query, hash, spaces.
+  if (id.includes('..') || /[?#\s]/.test(id)) return false
   return FILE_ID_RE.test(id)
 }
 
@@ -189,7 +193,7 @@ export function originalUrlFromFileId(
   if (!isValidFileId(fileId)) {
     throw new Error('INVALID_FILE_ID')
   }
-  return `https://${host}/${encodeURIComponent(fileId.trim())}`
+  return `https://${host}/${encodeURI(fileId.trim())}`
 }
 
 /**
@@ -199,7 +203,7 @@ export function jpgUrlFromFileId(fileId: string, host = ORIGINAL_CDN_HOST): stri
   if (!isValidFileId(fileId)) {
     throw new Error('INVALID_FILE_ID')
   }
-  return `https://${host}/${encodeURIComponent(fileId.trim())}?imageView2/2/w/0/format/jpg`
+  return `https://${host}/${encodeURI(fileId.trim())}?imageView2/2/w/0/format/jpg`
 }
 
 /**

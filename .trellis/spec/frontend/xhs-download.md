@@ -52,14 +52,14 @@ Default host: **`sns-img-bd.xhscdn.com`** (`ORIGINAL_CDN_HOST`).
 Image source selection (`resolveImageSourceUrl`):
 
 1. `resolveToken(image)`:
-   - Valid bare `fileId` first (`[A-Za-z0-9_-]+`; reject `/` `?` `#` spaces)
+   - Valid `fileId` first (`[A-Za-z0-9_-]+` or `notes_pre_post/<token>`; reject `..` `?` `#` spaces)
    - Else scan `infoList` (scene order) + `urlDefault` / `url` / `urlPre` via `extractFileIdFromUrl`
      - Strip `!nd_…` CDN transform suffix
      - webpic hosts: path `/{ts}/{hash}/{fileId}` → skip first two segments
 2. Token present → **bare original**  
    `https://sns-img-bd.xhscdn.com/{token}`  
    (no `imageView2`, no `!nd_…`; may be HEIC / `octet-stream`)
-3. Else `highestImageUrl`: `WB_DFT` → `WB_ORI` → `WB_HQ` → `WB_PRV` → `urlDefault` / `url` / `urlPre`
+3. No token → **skip the image**. Do not fall back to `highestImageUrl` / `WB_DFT` / `urlDefault` — those are ~1080p web thumbnails.
 
 Optional JPG (same token, not WB_DFT):
 
@@ -116,7 +116,7 @@ Success `200`:
 }
 ```
 
-- `proxyPath`: bare original when token resolved; otherwise page fallback URL.
+- `proxyPath`: bare original when token resolved; images without a token are omitted (no WB_DFT fallback).
 - `proxyPathJpg`: optional; present when a valid token was resolved (CDN JPG of same token). UI falls back to `proxyPath` if omitted.
 - Both paths always start with `/api/xhs/image?u=`. UI never receives raw CDN URLs.
 - Client and server both extract the first `http(s)` URL; strip trailing punctuation and CJK glued to the URL.
@@ -187,7 +187,7 @@ Minimum gates:
 
 1. `npm run build` / `npm run lint` clean for `src/` + `worker/` (ignore unrelated `.pi` warnings unless introduced by the task).
 2. Allowlist unit-style checks: reject non-XHS share/image hosts; accept `*.xhscdn.com` (incl. `sns-img-bd.xhscdn.com` / `sns-img-hw.xhscdn.com`).
-3. Parser: fixture HTML with `:undefined` + mixed `infoList` scenes → prefers `WB_DFT` when no token; with valid `fileId` / extractable token → bare `sns-img-bd` URL (no `imageView2`); `jpgUrlFromFileId` has `imageView2/2/w/0/format/jpg`.
+3. Parser: fixture HTML with `:undefined` + mixed `infoList` scenes → **skips** images with no token (does not emit WB_DFT); with valid `fileId` / extractable token → bare `sns-img-bd` URL (no `imageView2`); `jpgUrlFromFileId` has `imageView2/2/w/0/format/jpg`. `notes_pre_post/<token>` is a valid fileId.
 4. Proxy: synthetic HEIC / `octet-stream` body accepted via magic bytes; non-image body still 502.
 5. Manual / preview when workerd available: invalid URL, login-wall style missing state, bead tab regression; sample note with fileId downloads original-class size (≫ WB_DFT ~1080).
 
@@ -198,7 +198,7 @@ Assertion points:
 - `saveImage` maps `image/heic` / `image/heif` → `.heic`.
 - Bead workspace stays mounted (`is-hidden`) when switching tabs so generation state is preserved.
 - No ZIP / cookie / login-bypass code paths.
-- Invalid fileId (path chars) never becomes a CDN path segment.
+- Invalid fileId (`..`, `?`, `#`, spaces) never becomes a CDN path segment. `notes_pre_post/<token>` is allowed.
 
 ---
 

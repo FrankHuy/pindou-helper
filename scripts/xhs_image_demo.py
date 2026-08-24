@@ -29,7 +29,8 @@ UA = (
 )
 
 ORIGINAL_CDN_HOST = "sns-img-bd.xhscdn.com"
-FILE_ID_RE = re.compile(r"^[A-Za-z0-9_-]+$")
+# Bare tokens, or CDN path prefixes such as notes_pre_post/<token>.
+FILE_ID_RE = re.compile(r"^[A-Za-z0-9_-]+(?:/[A-Za-z0-9_-]+)*$")
 
 
 def state_from_page(page: str) -> dict:
@@ -69,9 +70,7 @@ def is_valid_file_id(file_id: object) -> bool:
     if not isinstance(file_id, str):
         return False
     token = file_id.strip()
-    if not token:
-        return False
-    if re.search(r"[/?#\s]", token):
+    if not token or ".." in token or re.search(r"[?#\s]", token):
         return False
     return bool(FILE_ID_RE.match(token))
 
@@ -167,13 +166,13 @@ def resolve_token(image: dict) -> str | None:
 def original_url_from_file_id(file_id: str, host: str = ORIGINAL_CDN_HOST) -> str:
     if not is_valid_file_id(file_id):
         raise ValueError("INVALID_FILE_ID")
-    return f"https://{host}/{quote(file_id.strip(), safe='')}"
+    return f"https://{host}/{quote(file_id.strip(), safe='/')}"
 
 
 def jpg_url_from_file_id(file_id: str, host: str = ORIGINAL_CDN_HOST) -> str:
     if not is_valid_file_id(file_id):
         raise ValueError("INVALID_FILE_ID")
-    return f"https://{host}/{quote(file_id.strip(), safe='')}?imageView2/2/w/0/format/jpg"
+    return f"https://{host}/{quote(file_id.strip(), safe='/')}?imageView2/2/w/0/format/jpg"
 
 
 def resolve_image_source_url(image: dict, prefer_jpg: bool = False) -> str:
