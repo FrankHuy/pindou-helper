@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 16
-- **Last Active**: 2026-07-29
+- **Total Sessions**: 17
+- **Last Active**: 2026-09-02
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~557 | Active |
+| `journal-1.md` | ~590 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 17 | 2026-09-02 | 修复注册邮件 Resend 发件域配置 | `db2654e` | `main` |
 | 16 | 2026-07-29 | 完成拼豆工作间三阶段识别优化 | `a789bb2`, `14db7e7`, `1e59aac`, `c787693` | `main` |
 | 15 | 2026-07-29 | 全站 UI 视觉升级与暗色模式 | `11d6744` | `main` |
 | 14 | 2026-07-29 | 生成图纸直达拼豆工作间 | `7ff8714` | `main` |

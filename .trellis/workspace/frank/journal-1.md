@@ -555,3 +555,36 @@ Implemented optional bead AI optimize: POST /api/ai/image-edit (single edits, ba
 ### Next Steps
 
 - None - task complete
+
+
+## Session 17: 修复注册邮件 Resend 发件域配置
+
+**Date**: 2026-09-02
+**Task**: 修复注册邮件 Resend 发件域配置
+**Branch**: `main`
+
+### Summary
+
+将生产发件人统一为已验证的 pindou.de5.net，禁止 resend.dev 回退，集中 Wrangler 非敏感配置并完成构建与配置验证。
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `db2654e` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
