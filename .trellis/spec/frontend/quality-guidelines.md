@@ -109,6 +109,63 @@ No unit test runner mandated yet. Minimum gates:
    - visible focus/disabled/error/success states in both themes
    - Canvas, uploaded images, QR images, and bead swatches keep original colors
 
+## Scenario: Production auth mail via Resend
+
+### 1. Scope / Trigger
+
+- Applies whenever auth mail behavior or Worker deployment variables change. It prevents production
+  delivery from silently falling back to Resend's account-owner-only testing domain.
+
+### 2. Signatures
+
+- `sendAuthEmail(env: MailEnv, options): Promise<SendMailResult>` owns sender validation and the
+  `POST https://api.resend.com/emails` call.
+- Registration verification, resend verification, and password reset must all use this shared path.
+
+### 3. Contracts
+
+- `RESEND_API_KEY`: Cloudflare Secret; missing means local console mode and `emailSent: false`.
+- `MAIL_FROM`: non-secret `wrangler.jsonc.vars` value on an exact Resend-verified domain.
+- Production sender: `拼豆助手 <noreply@pindou.de5.net>`.
+- Public failure diagnostics remain limited to `hasResendApiKey` and `hasMailFrom`; never return a
+  key or sender address.
+
+### 4. Validation & Error Matrix
+
+| Condition | Fetch Resend | Required result |
+|---|---:|---|
+| API key missing | No | `mode: 'console'`; log development action link |
+| `MAIL_FROM` missing with API key | No | `mode: 'config'`; actionable Chinese error |
+| Sender domain is `resend.dev` | No | `mode: 'config'`; require a verified domain |
+| Resend rejects request | Yes | `mode: 'resend'`; safe Chinese error |
+| Resend accepts request | Yes | `ok: true`, `mode: 'resend'` |
+
+### 5. Good/Base/Bad Cases
+
+- Good: API key Secret plus `MAIL_FROM=拼豆助手 <noreply@pindou.de5.net>` sends real mail.
+- Base: no API key locally logs the verification/reset URL and does not claim delivery.
+- Bad: `onboarding@resend.dev` in production fails configuration validation before any fetch.
+
+### 6. Tests Required
+
+- Mock `fetch` and assert the missing-key, missing-sender, testing-domain, and verified-sender
+  branches, including call count and exact `from` payload.
+- Run `npm run build`, `npm run lint`, Wrangler dry-run, `git diff --check`, and a secret scan.
+- After deploy, verify both registration and password-reset mail with a non-owner mailbox.
+
+### 7. Wrong vs Correct
+
+```typescript
+// Wrong: silently selects Resend's testing-only sender in production.
+const from = env.MAIL_FROM || 'onboarding@resend.dev'
+
+// Correct: require the repository-declared, verified-domain sender for real delivery.
+const from = env.MAIL_FROM?.trim()
+if (env.RESEND_API_KEY && (!from || usesResendTestingDomain(from))) {
+  return { ok: false, mode: 'config' }
+}
+```
+
 ---
 
 ## Code Review Checklist

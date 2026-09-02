@@ -19,13 +19,7 @@
 
 若未配置 `RESEND_API_KEY`：邮件不会真正发出，验证/重置链接会打到 **Worker 日志**（`[auth-mail:dev]`），仅适合本地调试。
 
-默认未设 `MAIL_FROM` 时，代码回退为：
-
-```text
-Pindou Helper <onboarding@resend.dev>
-```
-
-这是 Resend 测试发件人，**只能给 Resend 账号自己的邮箱试发**；生产请改成你自己域名下的地址（例如 `noreply@frankiehu.top`）。
+生产环境不再回退到 `onboarding@resend.dev`。配置了 `RESEND_API_KEY` 但缺少 `MAIL_FROM`，或 `MAIL_FROM` 仍使用 `resend.dev` 测试域名时，Worker 会在调用 Resend 前返回明确的配置错误，避免把测试域误当成生产发件域。
 
 ---
 
@@ -44,11 +38,12 @@ Pindou Helper <onboarding@resend.dev>
 ```text
 BOOTSTRAP_SUPERADMIN_EMAIL=Frank@Frankiehu.top
 RESEND_API_KEY=re_xxxxxxxx
-MAIL_FROM=拼豆助手 <noreply@frankiehu.top>
-TURNSTILE_SITE_KEY=0x...
+MAIL_FROM=拼豆助手 <noreply@pindou.de5.net>
 TURNSTILE_SECRET=0x...
 PASSWORD_PBKDF2_ITERATIONS=100000   # 可选
 ```
+
+仓库中的实际生产发件地址为 `拼豆助手 <noreply@pindou.de5.net>`。`VITE_TURNSTILE_SITE_KEY` 继续由 Cloudflare 构建变量提供，不写入 `wrangler.jsonc`。
 
 ---
 
@@ -91,36 +86,30 @@ npx wrangler d1 migrations apply pindou-helper-db --remote
 
 ### 2.3 Workers 环境变量与 Secrets
 
-在 **Cloudflare Dashboard** → **Workers & Pages** → 选中本 Worker（`pindou-helper`）→ **Settings** → **Variables and Secrets**：
+非敏感的 Worker 运行时配置以仓库中的 `wrangler.jsonc` 为准；Cloudflare Dashboard 只保存 Secret，以及构建阶段使用的 `VITE_TURNSTILE_SITE_KEY`：
 
 | 名称 | 类型 | 是否必填 | 说明 |
 |------|------|----------|------|
-| `BOOTSTRAP_SUPERADMIN_EMAIL` | 明文变量 | **生产必填** | 填 `Frank@Frankiehu.top`。该邮箱**首次注册成功**或**完成邮箱验证**时会提升为 `super_admin`。 |
+| `BOOTSTRAP_SUPERADMIN_EMAIL` | `wrangler.jsonc` 明文变量 | **生产必填** | 已设为 `Frank@Frankiehu.top`。该邮箱**首次注册成功**或**完成邮箱验证**时会提升为 `super_admin`。 |
 | `RESEND_API_KEY` | **Secret** | 生产必填 | [Resend](https://resend.com) API Key，`re_…`。 |
-| `MAIL_FROM` | 明文变量 | 生产强烈建议 | 如 `拼豆助手 <noreply@frankiehu.top>`。域名须在 Resend 完成 DNS 验证。 |
-| `TURNSTILE_SITE_KEY` | 明文变量 | 生产建议 | 与现有小红书解析相同；前端经 `GET /api/config` 读取。 |
+| `MAIL_FROM` | `wrangler.jsonc` 明文变量 | 生产必填 | 已设为 `拼豆助手 <noreply@pindou.de5.net>`；该域名须在 Resend 完成 DNS 验证。 |
+| `VITE_TURNSTILE_SITE_KEY` | Cloudflare 构建变量 | 生产建议 | 注入前端构建，不提交到仓库。 |
 | `TURNSTILE_SECRET` | **Secret** | 生产建议 | 有则注册/登录/忘记密码均校验 Turnstile；无则跳过（仅开发）。 |
-| `PASSWORD_PBKDF2_ITERATIONS` | 明文变量 | 可选 | 默认 `100000`。Free 计划 CPU 紧时可暂降，**生产鉴权建议 Workers Paid**。 |
+| `PASSWORD_PBKDF2_ITERATIONS` | `wrangler.jsonc` 明文变量 | 可选 | 已设为 `100000`。Free 计划 CPU 紧时可暂降，**生产鉴权建议 Workers Paid**。 |
+| `AI_IMAGE_BASE_URL` / `AI_IMAGE_MODEL` / `AI_IMAGE_SIZE` | `wrangler.jsonc` 明文变量 | 出图功能必填 | 已与当前 Wisart 配置统一。 |
+| `AI_IMAGE_API_KEY` | **Secret** | 出图功能必填 | 只保存在 Cloudflare Runtime Secrets。 |
 
 也可用 CLI（示例）：
 
 ```bash
 npx wrangler secret put RESEND_API_KEY
 npx wrangler secret put TURNSTILE_SECRET
+npx wrangler secret put AI_IMAGE_API_KEY
 
-# 明文变量可在 Dashboard 配置，或使用 wrangler.toml/jsonc 的 [vars]（勿把 Secret 写进仓库）
+# 非敏感运行时变量已由 wrangler.jsonc 管理；勿把 Secret 值写进仓库
 ```
 
-`wrangler.jsonc` 里**不要**提交真实 Secret。若用 `vars` 只放非敏感项：
-
-```jsonc
-// 可选：仅示例，按需加到 wrangler.jsonc（不要提交真实密钥）
-// "vars": {
-//   "BOOTSTRAP_SUPERADMIN_EMAIL": "Frank@Frankiehu.top",
-//   "MAIL_FROM": "拼豆助手 <noreply@frankiehu.top>",
-//   "TURNSTILE_SITE_KEY": "0x..."
-// }
-```
+`wrangler.jsonc` 的 `secrets.required` 只声明 `RESEND_API_KEY`、`TURNSTILE_SECRET`、`AI_IMAGE_API_KEY` 三个名称，不包含任何 Secret 值。当前代码未读取 `LLM_API_KEY`，所以没有把它声明为必需项。
 
 ### 2.4 绑定关系自检
 
@@ -145,10 +134,10 @@ Git 连接 Cloudflare 时：Build command `npm run build`，以仓库 `wrangler.
 ## 3. Resend（发信）配置步骤
 
 1. 注册 [Resend](https://resend.com)，创建 API Key → 放入 **该 Worker 生产环境** 的 Secret **`RESEND_API_KEY`**（不是 GitHub Actions、不是 Vite `VITE_*`、不是仅本地 `.env`）。
-2. **Domains** 添加你的域名（推荐 `frankiehu.top`），按提示加 DNS（SPF/DKIM 等），等到 **Verified**。
+2. **Domains** 确认 `pindou.de5.net` 状态为 **Verified**，并保持 Resend 要求的 DNS 记录有效。
 3. 设置 Worker **`MAIL_FROM`**，例如：
-   - `拼豆助手 <noreply@frankiehu.top>`
-   - 或 `noreply@frankiehu.top`
+   - `拼豆助手 <noreply@pindou.de5.net>`
+   - 或 `noreply@pindou.de5.net`
    - **From 的域名必须是 Resend 里已 Verified 的域名**（不能随便写未验证域）。
 4. 改完 Secrets/变量后，建议 **再 Deploy 一次** Worker（部分绑定变更后更稳妥）。
 5. 用真实白名单邮箱走一遍「注册 → 收验证邮件 → 点链接」。
@@ -160,7 +149,7 @@ Git 连接 Cloudflare 时：Build command `npm run build`，以仓库 `wrangler.
 
 **注意：**
 
-- 发件域（`MAIL_FROM`）与用户注册邮箱域名（白名单）是两件事：用户可用 `qq.com` / `gmail.com` 注册，信仍从你的 `frankiehu.top` 发出。
+- 发件域（`MAIL_FROM`）与用户注册邮箱域名（白名单）是两件事：用户可用 `qq.com` / `gmail.com` 注册，信仍从你的 `pindou.de5.net` 发出。
 - 超管邮箱 `Frank@Frankiehu.top` 属于白名单域 `frankiehu.top`，可直接注册。
 - **本地用同一 Key 能发信，不代表线上 Worker 一定绑了这两个变量**——最常见问题是变量加在了错误的项目/环境（Preview vs Production、Pages vs Worker）。
 
@@ -187,8 +176,8 @@ npx wrangler d1 execute pindou-helper-db --remote --command \
 
 1. Cloudflare Dashboard → Turnstile → 站点密钥对。
 2. Hostname 填生产域名。
-3. Worker：`TURNSTILE_SITE_KEY` + `TURNSTILE_SECRET`。
-4. 浏览器打开 `/api/config` 应看到 `turnstileSiteKey` 与 `turnstileRequired: true`。
+3. 前端构建变量：`VITE_TURNSTILE_SITE_KEY`；Worker Secret：`TURNSTILE_SECRET`。
+4. 浏览器应能正常加载 Turnstile，且 `/api/config` 应看到 `turnstileRequired: true`。仅使用构建变量时，`turnstileSiteKey` 可由前端构建产物提供，不要求 API 重复返回。
 
 ---
 
@@ -198,7 +187,7 @@ npx wrangler d1 execute pindou-helper-db --remote --command \
 
 - [ ] D1 `database_id` 已替换且 **remote migrations apply** 成功  
 - [ ] `BOOTSTRAP_SUPERADMIN_EMAIL=Frank@Frankiehu.top`  
-- [ ] `RESEND_API_KEY` + 已验证域名的 `MAIL_FROM`  
+- [ ] `RESEND_API_KEY` + `MAIL_FROM=拼豆助手 <noreply@pindou.de5.net>`
 - [ ] Turnstile 双钥（生产）  
 - [ ] `npm run deploy` 成功，HTTPS 可访问  
 

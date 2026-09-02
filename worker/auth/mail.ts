@@ -21,12 +21,10 @@ export type SendMailResult =
   | { ok: true; mode: 'resend'; id?: string; probe: MailConfigProbe }
   | {
       ok: false
-      mode: 'console' | 'resend'
+      mode: 'console' | 'config' | 'resend'
       message: string
       probe: MailConfigProbe
     }
-
-const DEFAULT_FROM = 'Pindou Helper <onboarding@resend.dev>'
 
 export function probeMailConfig(env: MailEnv): MailConfigProbe {
   return {
@@ -35,8 +33,10 @@ export function probeMailConfig(env: MailEnv): MailConfigProbe {
   }
 }
 
-function effectiveFrom(env: MailEnv): string {
-  return env.MAIL_FROM?.trim() || DEFAULT_FROM
+function usesResendTestingDomain(from: string): boolean {
+  const address = from.match(/(?:<)?[^<>\s@]+@([^<>\s]+)>?\s*$/)
+  const domain = address?.[1]?.toLowerCase()
+  return domain === 'resend.dev' || Boolean(domain?.endsWith('.resend.dev'))
 }
 
 export async function sendAuthEmail(
@@ -50,14 +50,14 @@ export async function sendAuthEmail(
 ): Promise<SendMailResult> {
   const apiKey = env.RESEND_API_KEY?.trim()
   const probe = probeMailConfig(env)
-  const from = effectiveFrom(env)
+  const from = env.MAIL_FROM?.trim() || ''
 
   if (!apiKey) {
     console.info('[auth-mail:dev] RESEND_API_KEY missing — email not sent', {
       to: options.to,
       subject: options.subject,
       hasMailFrom: probe.hasMailFrom,
-      from,
+      from: from || null,
       text: options.text,
     })
     return {
@@ -65,6 +65,36 @@ export async function sendAuthEmail(
       mode: 'console',
       message:
         '服务器未配置 RESEND_API_KEY，验证邮件未发出（请在 Cloudflare Worker 运行时 Secrets 中配置）',
+      probe,
+    }
+  }
+
+  if (!from) {
+    console.error('[auth-mail] invalid configuration', {
+      hasResendApiKey: true,
+      hasMailFrom: false,
+      reason: 'MAIL_FROM missing',
+    })
+    return {
+      ok: false,
+      mode: 'config',
+      message:
+        '邮件服务未配置 MAIL_FROM，请在 wrangler.jsonc 中设置已验证域名的发件地址',
+      probe,
+    }
+  }
+
+  if (usesResendTestingDomain(from)) {
+    console.error('[auth-mail] invalid configuration', {
+      hasResendApiKey: true,
+      hasMailFrom: true,
+      reason: 'resend.dev is testing-only',
+    })
+    return {
+      ok: false,
+      mode: 'config',
+      message:
+        'MAIL_FROM 不能使用 resend.dev 测试域名，请改用 Resend 中已验证的发件域名',
       probe,
     }
   }

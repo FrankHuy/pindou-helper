@@ -12,6 +12,19 @@
     "run_worker_first": ["/api/*"],
     "binding": "ASSETS"
   },
+  // Non-sensitive runtime configuration. Keep secret values in Cloudflare Secrets.
+  "vars": {
+    "MAIL_FROM": "拼豆助手 <noreply@pindou.de5.net>",
+    "BOOTSTRAP_SUPERADMIN_EMAIL": "Frank@Frankiehu.top",
+    "PASSWORD_PBKDF2_ITERATIONS": "100000",
+    "AI_IMAGE_BASE_URL": "https://wisart.kuaileshifu.com",
+    "AI_IMAGE_MODEL": "gpt-image-2",
+    "AI_IMAGE_SIZE": "1024x1024"
+  },
+  // Declare required names only; values stay in Cloudflare runtime secrets.
+  "secrets": {
+    "required": ["RESEND_API_KEY", "TURNSTILE_SECRET", "AI_IMAGE_API_KEY"]
+  },
   // D1 — create once: `npx wrangler d1 create pindou-helper-db`
   // then replace database_id below. Local migrations work with any placeholder id.
   "d1_databases": [
