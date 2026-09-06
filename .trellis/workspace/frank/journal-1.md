@@ -588,3 +588,36 @@ Implemented optional bead AI optimize: POST /api/ai/image-edit (single edits, ba
 ### Next Steps
 
 - None - task complete
+
+
+## Session 18: Inventory CSV import
+
+**Date**: 2026-09-06
+**Task**: Inventory CSV import
+**Branch**: `main`
+
+### Summary
+
+Added local matrix CSV parsing and preview, strict session-gated bulk overwrite API, server-side MARD validation, atomic D1 adjust ledger writes, and regression coverage.
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `e429bf5` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
