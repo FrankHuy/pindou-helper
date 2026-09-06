@@ -621,3 +621,36 @@ Added local matrix CSV parsing and preview, strict session-gated bulk overwrite 
 ### Next Steps
 
 - None - task complete
+
+
+## Session 19: Inventory CSV import modes
+
+**Date**: 2026-09-06
+**Task**: Inventory CSV import modes
+**Branch**: `main`
+
+### Summary
+
+Added explicit additive and replacement CSV import modes, safe additive defaults and resets, warning UX for replacement, backward-compatible API validation, and atomic mode-specific inventory ledger behavior.
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `058c07d` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 18
+- **Total Sessions**: 19
 - **Last Active**: 2026-09-06
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~623 | Active |
+| `journal-1.md` | ~656 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 19 | 2026-09-06 | Inventory CSV import modes | `058c07d` | `main` |
 | 18 | 2026-09-06 | Inventory CSV import | `e429bf5` | `main` |
 | 17 | 2026-09-02 | 修复注册邮件 Resend 发件域配置 | `db2654e` | `main` |
 | 16 | 2026-07-29 | 完成拼豆工作间三阶段识别优化 | `a789bb2`, `14db7e7`, `1e59aac`, `c787693` | `main` |
