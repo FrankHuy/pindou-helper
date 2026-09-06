@@ -145,6 +145,57 @@ export async function setQuantity(
   await db.batch(statements)
 }
 
+/** Bulk overwrite quantities and record actual deltas atomically for CSV import. */
+export async function setQuantities(
+  db: D1Database,
+  userId: string,
+  items: Array<{ code: string; quantity: number }>,
+): Promise<void> {
+  const now = Date.now()
+  const statements: D1PreparedStatement[] = []
+
+  for (const item of items) {
+    statements.push(
+      db
+        .prepare(
+          `INSERT INTO user_inventory_ledger (id, user_id, code, delta, reason, ref_id, created_at)
+           SELECT ?, ?, ?,
+             ? - COALESCE((
+               SELECT quantity FROM user_bead_inventory WHERE user_id = ? AND code = ?
+             ), 0),
+             'adjust', NULL, ?
+           WHERE ? != COALESCE((
+             SELECT quantity FROM user_bead_inventory WHERE user_id = ? AND code = ?
+           ), 0)`,
+        )
+        .bind(
+          newId(),
+          userId,
+          item.code,
+          item.quantity,
+          userId,
+          item.code,
+          now,
+          item.quantity,
+          userId,
+          item.code,
+        ),
+      db
+        .prepare(
+          `INSERT INTO user_bead_inventory (user_id, code, quantity, touched, updated_at)
+           VALUES (?, ?, ?, 1, ?)
+           ON CONFLICT (user_id, code) DO UPDATE SET
+             quantity = excluded.quantity,
+             touched = 1,
+             updated_at = excluded.updated_at`,
+        )
+        .bind(userId, item.code, item.quantity, now),
+    )
+  }
+
+  await db.batch(statements)
+}
+
 export type DeductResult = {
   /** Codes where balance was insufficient before deduct */
   shortages: Array<{ code: string; balance: number; needed: number; deducted: number }>

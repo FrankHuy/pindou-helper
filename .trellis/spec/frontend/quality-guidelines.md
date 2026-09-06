@@ -84,6 +84,8 @@ Prefer pure-frontend algorithms; **no new runtime deps** unless task-approved.
 10. Inventory: deduct **clamps to 0** (never negative); shortage is informational, not 409
 11. Inventory: every mutation writes a ledger row inside the **same D1 batch** as the balance change (atomic)
 12. Inventory: only color codes and quantities transmitted — **no sheet images uploaded**'
+13. Inventory CSV: parse the original file locally; server accepts only validated MARD
+    `{ code, quantity }[]` and derives `userId` from the current session
 
 ---
 
@@ -108,6 +110,72 @@ No unit test runner mandated yet. Minimum gates:
    - no root horizontal overflow (table/Canvas containers may scroll)
    - visible focus/disabled/error/success states in both themes
    - Canvas, uploaded images, QR images, and bead swatches keep original colors
+
+## Scenario: Inventory matrix CSV import
+
+### 1. Scope / Trigger
+
+- Applies whenever inventory CSV parsing, import UI, inventory API payloads, MARD catalog bounds, or
+  bulk inventory writes change. It preserves overwrite semantics, account isolation, and atomic history.
+
+### 2. Signatures
+
+- `parseInventoryCsv(text, validCodes): InventoryCsvResult` is pure and browser-independent.
+- `PUT /api/inventory/import` accepts confirmed derived items only.
+- `setQuantities(db, userId, items): Promise<void>` owns conditional ledger SQL plus bulk upserts;
+  compute each old balance inside the same D1 batch, before its corresponding upsert.
+- `normalizeMardCode(raw): string | null` is the Worker-side catalog gate; its bounds must stay in
+  sync with `src/lib/palettes/mard-colors.ts`.
+
+### 3. Contracts
+
+- CSV matrix: first cell `系列`, positive integer suffix columns, unique alphabetic series rows.
+- Non-empty cell means exact particle balance overwrite; blank means unchanged; `0` means clear.
+- Request: `{ items: Array<{ code: string; quantity: number }> }`, 1–291 unique real MARD codes.
+- Response: the current session user's `InventorySnapshot`; no client `userId` is accepted.
+- The browser may display the local filename, but neither filename nor original CSV text is sent.
+- Changed balances write `reason = 'adjust'` with `delta = new - old`; unchanged balances write no
+  zero-delta ledger row.
+
+### 4. Validation & Error Matrix
+
+| Condition | API call/write | Required result |
+|---|---:|---|
+| BOM, CRLF/LF, quoted fields | Allowed after local parse | Same normalized matrix result |
+| Blank quantity | Omitted | Existing balance unchanged |
+| Negative, decimal, unsafe integer | No | Chinese row/column error |
+| Duplicate suffix/series/code | No | Reject the whole import |
+| Unknown MARD code | No | Client parser and Worker both reject |
+| File over 1 MiB / more than 291 items | No | Reject before any D1 mutation |
+| Extra request/item field, including `userId` | No | `400 invalid_request` |
+| Valid confirmed items | One D1 batch | Upserts and non-zero `adjust` rows are atomic |
+
+### 5. Good/Base/Bad Cases
+
+- Good: `系列,1,2` plus `A,100,0` sets A1 to 100 and clears A2 for the signed-in user.
+- Base: `A,,25` leaves A1 unchanged and overwrites only A2.
+- Bad: a malformed quote, `ZZ999`, duplicate `A` row, or client-supplied `userId` performs no write.
+
+### 6. Tests Required
+
+- Parser harness: valid subset, blank/zero, BOM, CRLF, quotes/escaped quotes, duplicate row/column,
+  unknown code, negative/decimal, malformed quote, 1 MiB limit, and 291-item cap.
+- Catalog parity: all `MARD_COLORS` pass `normalizeMardCode`, count is 291, and out-of-range codes fail.
+- Handler/D1 harness: request `userId` cannot override session ID; invalid payloads call no batch;
+  valid overwrite uses one batch and records actual non-zero deltas for that session user.
+- Run `npm run build`, `npm run lint`, and `git diff --check`; manually inspect narrow/light/dark UI.
+
+### 7. Wrong vs Correct
+
+```typescript
+// Wrong: upload the CSV or trust an account identifier from the browser.
+await fetch('/api/inventory/import', { body: JSON.stringify({ userId, csvText }) })
+
+// Correct: parse locally and send only confirmed derived values; Worker uses session.user.id.
+const { items, errors } = parseInventoryCsv(csvText, validCodes)
+if (errors.length === 0) await importInventory(items)
+await setQuantities(env.DB, session.user.id, items)
+```
 
 ## Scenario: Production auth mail via Resend
 

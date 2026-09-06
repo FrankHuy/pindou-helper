@@ -71,7 +71,8 @@ src/
     │   └── types.ts
     └── inventory/          # Pure inventory math + types (no React)
         ├── types.ts
-        └── math.ts
+        ├── math.ts
+        └── csv.ts          # Local-only inventory matrix CSV parser/validator
     └── palettes/
         ├── types.ts
         ├── mard-colors.ts
@@ -123,7 +124,7 @@ public/
 | Auth Worker | `worker/auth/*`, `worker/db/*` | D1 users/sessions; no `src/` imports |
 | Admin UI | `src/features/admin/*` | Mini ops page; hide link unless admin/super; API still enforces |
 | Admin Worker | `worker/admin/*` | `/api/admin/*` role matrix; no `src/` imports |
-| Inventory lib | `src/lib/inventory/*` | Pure types + math (grams, shortages, low-stock, snapshot); no React |
+| Inventory lib | `src/lib/inventory/*` | Pure types + math + local CSV parsing; no React/DOM/network |
 | Inventory UI + client | `src/features/inventory/*` | Spreadsheet entry, filters, correction, threshold, ledger; same-origin `/api/inventory/*` |
 | Inventory Worker | `worker/inventory/*`, `worker/db/inventory.ts` | D1 helpers + handlers (session gate, clamp-to-zero deduct, atomic ledger) |
 

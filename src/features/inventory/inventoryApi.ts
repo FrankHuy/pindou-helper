@@ -4,6 +4,7 @@ import type {
   DeductResponse,
   InventoryEntryItem,
   InventoryEntryUnit,
+  InventoryImportItem,
   InventorySnapshot,
   LedgerResponse,
 } from '../../lib/inventory/types'
@@ -77,6 +78,13 @@ export async function setCodeQuantity(code: string, quantity: number): Promise<I
   return invFetch<InventorySnapshot>(`/api/inventory/codes/${encodeURIComponent(code)}`, {
     method: 'PUT',
     json: { quantity },
+  })
+}
+
+export async function importInventory(items: InventoryImportItem[]): Promise<InventorySnapshot> {
+  return invFetch<InventorySnapshot>('/api/inventory/import', {
+    method: 'PUT',
+    json: { items },
   })
 }
 

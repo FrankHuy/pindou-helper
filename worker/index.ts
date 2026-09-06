@@ -15,6 +15,7 @@ import {
   handleDeduct,
   handleGetInventory,
   handleGetLedger,
+  handleImportInventory,
   handleSetQuantity,
   handleUpdateSettings,
 } from './inventory/handlers'
@@ -172,6 +173,12 @@ export default {
       if (request.method !== 'POST') return methodNotAllowed()
       if (!env.DB) return jsonServerError()
       return handleAddEntries(request, env)
+    }
+    if (url.pathname === '/api/inventory/import') {
+      if (request.method === 'OPTIONS') return options('PUT')
+      if (request.method !== 'PUT') return methodNotAllowed()
+      if (!env.DB) return jsonServerError()
+      return handleImportInventory(request, env)
     }
     if (url.pathname === '/api/inventory/deduct') {
       if (request.method === 'OPTIONS') return options('POST')

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import type { ChangeEvent } from 'react'
 import type { PublicUser } from '../auth/authApi'
 import {
   ALL_SERIES,
@@ -11,9 +12,15 @@ import type {
   InventorySnapshot,
   InventoryEntryUnit,
   InventoryEntryItem,
+  InventoryImportItem,
   LedgerEntry,
   LedgerResponse,
 } from '../../lib/inventory/types'
+import {
+  MAX_INVENTORY_CSV_BYTES,
+  parseInventoryCsv,
+  type InventoryCsvResult,
+} from '../../lib/inventory/csv'
 import {
   totalBeads,
   touchedCount,
@@ -25,6 +32,7 @@ import {
   setCodeQuantity,
   updateLowStockThreshold,
   fetchLedger,
+  importInventory,
   InventoryRequestError,
 } from './inventoryApi'
 import './inventory.css'
@@ -43,6 +51,11 @@ const REASON_LABELS: Record<LedgerEntry['reason'], string> = {
 }
 
 const LEDGER_PAGE_SIZE = 50
+const VALID_MARD_CODES = new Set(MARD_COLORS.map((color) => color.code))
+
+type CsvImportPreview = InventoryCsvResult & {
+  fileName: string
+}
 
 type InventoryTabProps = {
   sessionUser: PublicUser | null
@@ -110,12 +123,23 @@ export default function InventoryTab({
   const [ledgerEntries, setLedgerEntries] = useState<LedgerEntry[]>([])
   const [ledgerCursor, setLedgerCursor] = useState<number | null>(null)
 
+  // --- CSV import ---
+  const [csvPreview, setCsvPreview] = useState<CsvImportPreview | null>(null)
+  const [csvReading, setCsvReading] = useState(false)
+  const csvReadRef = useRef(0)
+
   const successTimer = useRef<number | null>(null)
   useEffect(() => {
     return () => {
       if (successTimer.current != null) window.clearTimeout(successTimer.current)
     }
   }, [])
+
+  useEffect(() => {
+    csvReadRef.current += 1
+    setCsvPreview(null)
+    setCsvReading(false)
+  }, [sessionUser?.id])
 
   const showSuccess = useCallback((msg: string) => {
     setSuccessMsg(msg)
@@ -280,6 +304,56 @@ export default function InventoryTab({
     }
   }, [thresholdInput, onMutated, showSuccess])
 
+  const handleCsvFileChange = useCallback(async (event: ChangeEvent<HTMLInputElement>) => {
+    const input = event.currentTarget
+    const file = input.files?.[0]
+    if (!file) return
+
+    const readId = ++csvReadRef.current
+    setActionError('')
+    setSuccessMsg('')
+
+    if (!file.name.toLowerCase().endsWith('.csv')) {
+      setCsvPreview({
+        fileName: file.name,
+        items: [],
+        emptyCellCount: 0,
+        errors: ['请选择扩展名为 .csv 的文件'],
+      })
+      input.value = ''
+      return
+    }
+    if (file.size > MAX_INVENTORY_CSV_BYTES) {
+      setCsvPreview({
+        fileName: file.name,
+        items: [],
+        emptyCellCount: 0,
+        errors: ['CSV 文件不能超过 1 MiB'],
+      })
+      input.value = ''
+      return
+    }
+
+    setCsvReading(true)
+    try {
+      const bytes = await file.arrayBuffer()
+      const text = new TextDecoder('utf-8', { fatal: true }).decode(bytes)
+      if (csvReadRef.current !== readId) return
+      setCsvPreview({ fileName: file.name, ...parseInventoryCsv(text, VALID_MARD_CODES) })
+    } catch {
+      if (csvReadRef.current !== readId) return
+      setCsvPreview({
+        fileName: file.name,
+        items: [],
+        emptyCellCount: 0,
+        errors: ['CSV 读取失败，请确认文件使用 UTF-8 编码'],
+      })
+    } finally {
+      if (csvReadRef.current === readId) setCsvReading(false)
+      input.value = ''
+    }
+  }, [])
+
   const loadLedger = useCallback(async (cursor: number | null, reset: boolean) => {
     setLedgerLoading(true)
     try {
@@ -296,6 +370,26 @@ export default function InventoryTab({
       setLedgerLoading(false)
     }
   }, [])
+
+  const handleCsvImport = useCallback(async () => {
+    const preview = csvPreview
+    if (!preview || preview.errors.length > 0 || preview.items.length === 0) return
+
+    setSubmitting(true)
+    setActionError('')
+    try {
+      const items: InventoryImportItem[] = preview.items
+      const snapshot = await importInventory(items)
+      onMutated(snapshot)
+      setCsvPreview(null)
+      if (ledgerOpen) await loadLedger(null, true)
+      showSuccess(`已从 CSV 覆盖 ${items.length} 个色号`)
+    } catch (err) {
+      setActionError(err instanceof InventoryRequestError ? err.message : 'CSV 导入失败')
+    } finally {
+      setSubmitting(false)
+    }
+  }, [csvPreview, ledgerOpen, loadLedger, onMutated, showSuccess])
 
   const toggleLedger = useCallback(() => {
     const nextOpen = !ledgerOpen
@@ -423,6 +517,74 @@ export default function InventoryTab({
         录入单位为{unitLabel}，{unit === 'gram' ? '1g = 100颗' : '直接输入颗数'}；
         批量录入为「增加」到现有库存，不会覆盖。
       </p>
+
+      <section className="inventory-panel inventory-csv-import" aria-labelledby="inventory-csv-title">
+        <div className="inventory-csv-heading">
+          <div>
+            <h3 id="inventory-csv-title" className="inventory-section-heading">导入 CSV</h3>
+            <p>按当前表格的“系列 × 数字”格式批量覆盖库存，空白不变，0 表示清零。</p>
+          </div>
+          <label className={`inventory-csv-picker${csvReading || submitting ? ' is-disabled' : ''}`}>
+            {csvReading ? '正在读取…' : '选择 CSV'}
+            <input
+              type="file"
+              accept=".csv,text/csv"
+              disabled={csvReading || submitting}
+              onChange={(event) => void handleCsvFileChange(event)}
+            />
+          </label>
+        </div>
+        <p className="inventory-csv-format">
+          示例：<code>系列,1,2,3</code>；下一行可填写 <code>A,100,0,</code>。数量单位为颗。
+        </p>
+
+        {csvPreview && (
+          <div className={`inventory-csv-preview${csvPreview.errors.length > 0 ? ' has-errors' : ''}`}>
+            <div className="inventory-csv-summary">
+              <strong title={csvPreview.fileName}>{csvPreview.fileName}</strong>
+              <span>有效色号 {csvPreview.items.length} 个</span>
+              <span>忽略空白 {csvPreview.emptyCellCount} 格</span>
+            </div>
+            {csvPreview.errors.length > 0 && (
+              <>
+                <ul className="inventory-csv-errors">
+                  {csvPreview.errors.slice(0, 8).map((message, index) => (
+                    <li key={`${index}-${message}`}>{message}</li>
+                  ))}
+                </ul>
+                {csvPreview.errors.length > 8 && (
+                  <p className="inventory-csv-more-errors">
+                    另有 {csvPreview.errors.length - 8} 条错误，请修正文件后重新选择。
+                  </p>
+                )}
+              </>
+            )}
+            <div className="inventory-csv-actions">
+              {csvPreview.errors.length === 0 && csvPreview.items.length > 0 && (
+                <button
+                  type="button"
+                  className="primary"
+                  disabled={submitting}
+                  onClick={() => void handleCsvImport()}
+                >
+                  {submitting ? '导入中…' : `确认覆盖 ${csvPreview.items.length} 个色号`}
+                </button>
+              )}
+              <button
+                type="button"
+                disabled={submitting}
+                onClick={() => {
+                  csvReadRef.current += 1
+                  setCsvPreview(null)
+                  setCsvReading(false)
+                }}
+              >
+                取消
+              </button>
+            </div>
+          </div>
+        )}
+      </section>
 
       {/* Spreadsheet grid */}
       <div className="inventory-grid-wrap">

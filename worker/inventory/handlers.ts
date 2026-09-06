@@ -9,9 +9,11 @@ import {
   loadSettings,
   queryLedger,
   saveSettings,
+  setQuantities,
   setQuantity,
   type InventoryRow,
 } from '../db/inventory'
+import { MARD_CODE_COUNT, normalizeMardCode } from './mard-codes'
 
 async function requireSession(
   db: D1Database,
@@ -135,6 +137,62 @@ export async function handleSetQuantity(
 
   await setQuantity(env.DB, session.user.id, trimmedCode, rawQty)
 
+  const [records, settings] = await Promise.all([
+    loadInventory(env.DB, session.user.id),
+    loadSettings(env.DB, session.user.id),
+  ])
+  return jsonOk(toInventoryResponse(records, settings.lowStockThreshold, settings.updatedAt))
+}
+
+/** PUT /api/inventory/import — atomic CSV-derived quantity overwrite. */
+export async function handleImportInventory(
+  request: Request,
+  env: { DB: D1Database },
+): Promise<Response> {
+  const session = await requireSession(env.DB, request)
+  if (session instanceof Response) return session
+
+  const parsed = await readJsonBody(request)
+  if (!parsed.ok) return parsed.response
+  if (Object.keys(parsed.body).some((key) => key !== 'items')) {
+    return jsonError(400, 'invalid_request', '导入请求只能包含色号与库存数量')
+  }
+
+  const rawItems = parsed.body.items
+  if (!Array.isArray(rawItems) || rawItems.length === 0 || rawItems.length > MARD_CODE_COUNT) {
+    return jsonError(400, 'invalid_request', `items 必须包含 1 至 ${MARD_CODE_COUNT} 个色号`)
+  }
+
+  const items: Array<{ code: string; quantity: number }> = []
+  const seenCodes = new Set<string>()
+  for (const raw of rawItems) {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+      return jsonError(400, 'invalid_request', '导入条目格式无效')
+    }
+    const item = raw as Record<string, unknown>
+    if (Object.keys(item).some((key) => key !== 'code' && key !== 'quantity')) {
+      return jsonError(400, 'invalid_request', '导入条目只能包含色号与库存数量')
+    }
+    const code = normalizeMardCode(item.code)
+    const quantity = item.quantity
+    if (!code) {
+      return jsonError(400, 'invalid_request', '导入色号不存在于 MARD 色卡')
+    }
+    if (seenCodes.has(code)) {
+      return jsonError(400, 'invalid_request', `导入文件包含重复色号 ${code}`)
+    }
+    if (
+      typeof quantity !== 'number' ||
+      !Number.isSafeInteger(quantity) ||
+      quantity < 0
+    ) {
+      return jsonError(400, 'invalid_request', `色号 ${code} 的库存必须是非负整数`)
+    }
+    seenCodes.add(code)
+    items.push({ code, quantity })
+  }
+
+  await setQuantities(env.DB, session.user.id, items)
   const [records, settings] = await Promise.all([
     loadInventory(env.DB, session.user.id),
     loadSettings(env.DB, session.user.id),

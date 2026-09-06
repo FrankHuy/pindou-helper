@@ -20,6 +20,11 @@ export type InventoryEntryItem = {
   value: number
 }
 
+export type InventoryImportItem = {
+  code: string
+  quantity: number
+}
+
 export type ShortageItem = {
   code: string
   balance: number
