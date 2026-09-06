@@ -25,6 +25,8 @@ export type InventoryImportItem = {
   quantity: number
 }
 
+export type InventoryImportMode = 'add' | 'replace'
+
 export type ShortageItem = {
   code: string
   balance: number

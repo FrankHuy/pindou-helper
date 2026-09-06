@@ -134,11 +134,13 @@ Upload / split **pointerup** / 「重新识别」 → Phase 1 legend extract onl
 | `thresholdInput` | Low-stock threshold settings input |
 | `filterLowStock`, `filterSeries` | Correction list filters |
 | `ledgerOpen`, `ledgerEntries`, `ledgerCursor` | Ledger collapsible + cursor pagination |
-| `csvPreview`, `csvReading`, `csvReadRef` | Local CSV result, read progress, stale-read cancellation |
+| `csvPreview`, `csvMode`, `csvReading`, `csvReadRef` | Local CSV result, add/replace choice, read progress, stale-read cancellation |
 
 CSV preview belongs to `InventoryTab`, not the App shell: the original file never leaves the browser,
 and only confirmed `{ code, quantity }[]` updates the shell-owned inventory snapshot. Clear preview state
 whenever `sessionUser.id` changes so a file selected under one account cannot be submitted after switching.
+`csvMode` defaults to `add` and also resets on every new file and cancel action; never persist overwrite
+across files or accounts.
 
 ### Workshop inventory state (summary)
 

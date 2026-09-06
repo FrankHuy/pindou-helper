@@ -592,6 +592,11 @@ table.inventory-grid {
   background: var(--success-soft);
 }
 
+.inventory-csv-preview.is-replace {
+  border-color: var(--warning);
+  background: var(--warning-soft);
+}
+
 .inventory-csv-preview.has-errors {
   border-color: var(--danger);
   background: var(--danger-soft);
@@ -617,10 +622,89 @@ table.inventory-grid {
   font-size: 12px;
 }
 
+.inventory-csv-mode-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.inventory-csv-mode-label {
+  color: var(--text-soft);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.inventory-csv-mode-toggle {
+  display: inline-flex;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--surface-raised);
+}
+
+.inventory-csv-mode-toggle button {
+  min-height: 30px;
+  padding: 5px 14px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.inventory-csv-mode-toggle button:hover {
+  color: var(--brand-strong);
+}
+
+.inventory-csv-mode-toggle button.active {
+  background: var(--brand);
+  color: var(--brand-contrast);
+}
+
+.inventory-csv-mode-toggle button.active.replace {
+  background: var(--warning-soft);
+  color: var(--warning);
+  box-shadow: inset 0 0 0 1px var(--warning);
+}
+
+.inventory-csv-mode-toggle button:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.inventory-csv-mode-toggle button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.inventory-csv-mode-hint,
+.inventory-csv-zero-note {
+  margin: 0;
+  font-size: 12px;
+}
+
+.inventory-csv-mode-hint {
+  color: var(--success);
+}
+
+.inventory-csv-mode-hint.is-warning,
+.inventory-csv-zero-note {
+  color: var(--warning);
+}
+
 .inventory-csv-actions button.primary {
   border-color: var(--brand);
   background: var(--brand);
   color: var(--brand-contrast);
+}
+
+.inventory-csv-actions button.primary.is-replace {
+  border-color: var(--warning);
+  background: var(--warning);
+  color: var(--surface-raised);
 }
 
 /* Workshop integration helper styles for clearer layout */

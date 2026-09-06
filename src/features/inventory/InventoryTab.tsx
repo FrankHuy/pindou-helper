@@ -13,6 +13,7 @@ import type {
   InventoryEntryUnit,
   InventoryEntryItem,
   InventoryImportItem,
+  InventoryImportMode,
   LedgerEntry,
   LedgerResponse,
 } from '../../lib/inventory/types'
@@ -125,6 +126,7 @@ export default function InventoryTab({
 
   // --- CSV import ---
   const [csvPreview, setCsvPreview] = useState<CsvImportPreview | null>(null)
+  const [csvMode, setCsvMode] = useState<InventoryImportMode>('add')
   const [csvReading, setCsvReading] = useState(false)
   const csvReadRef = useRef(0)
 
@@ -138,6 +140,7 @@ export default function InventoryTab({
   useEffect(() => {
     csvReadRef.current += 1
     setCsvPreview(null)
+    setCsvMode('add')
     setCsvReading(false)
   }, [sessionUser?.id])
 
@@ -310,6 +313,7 @@ export default function InventoryTab({
     if (!file) return
 
     const readId = ++csvReadRef.current
+    setCsvMode('add')
     setActionError('')
     setSuccessMsg('')
 
@@ -375,21 +379,27 @@ export default function InventoryTab({
     const preview = csvPreview
     if (!preview || preview.errors.length > 0 || preview.items.length === 0) return
 
+    const itemCount = csvMode === 'add'
+      ? preview.items.filter((item) => item.quantity > 0).length
+      : preview.items.length
+    if (itemCount === 0) return
+
     setSubmitting(true)
     setActionError('')
     try {
       const items: InventoryImportItem[] = preview.items
-      const snapshot = await importInventory(items)
+      const snapshot = await importInventory(csvMode, items)
       onMutated(snapshot)
       setCsvPreview(null)
+      setCsvMode('add')
       if (ledgerOpen) await loadLedger(null, true)
-      showSuccess(`已从 CSV 覆盖 ${items.length} 个色号`)
+      showSuccess(`已从 CSV ${csvMode === 'add' ? '新增' : '覆盖'} ${itemCount} 个色号`)
     } catch (err) {
       setActionError(err instanceof InventoryRequestError ? err.message : 'CSV 导入失败')
     } finally {
       setSubmitting(false)
     }
-  }, [csvPreview, ledgerOpen, loadLedger, onMutated, showSuccess])
+  }, [csvMode, csvPreview, ledgerOpen, loadLedger, onMutated, showSuccess])
 
   const toggleLedger = useCallback(() => {
     const nextOpen = !ledgerOpen
@@ -400,6 +410,11 @@ export default function InventoryTab({
   }, [ledgerOpen, ledgerEntries.length, loadLedger])
 
   const unitLabel = unit === 'bead' ? '颗' : 'g'
+  const csvImportItemCount = csvPreview
+    ? csvMode === 'add'
+      ? csvPreview.items.filter((item) => item.quantity > 0).length
+      : csvPreview.items.length
+    : 0
 
   // --- Login gate ---
   if (!sessionUser) {
@@ -522,7 +537,7 @@ export default function InventoryTab({
         <div className="inventory-csv-heading">
           <div>
             <h3 id="inventory-csv-title" className="inventory-section-heading">导入 CSV</h3>
-            <p>按当前表格的“系列 × 数字”格式批量覆盖库存，空白不变，0 表示清零。</p>
+            <p>按当前表格的“系列 × 数字”格式导入，可选择新增或覆盖。</p>
           </div>
           <label className={`inventory-csv-picker${csvReading || submitting ? ' is-disabled' : ''}`}>
             {csvReading ? '正在读取…' : '选择 CSV'}
@@ -539,7 +554,9 @@ export default function InventoryTab({
         </p>
 
         {csvPreview && (
-          <div className={`inventory-csv-preview${csvPreview.errors.length > 0 ? ' has-errors' : ''}`}>
+          <div
+            className={`inventory-csv-preview${csvMode === 'replace' ? ' is-replace' : ''}${csvPreview.errors.length > 0 ? ' has-errors' : ''}`}
+          >
             <div className="inventory-csv-summary">
               <strong title={csvPreview.fileName}>{csvPreview.fileName}</strong>
               <span>有效色号 {csvPreview.items.length} 个</span>
@@ -559,15 +576,54 @@ export default function InventoryTab({
                 )}
               </>
             )}
+            {csvPreview.errors.length === 0 && csvPreview.items.length > 0 && (
+              <>
+                <div className="inventory-csv-mode-row">
+                  <span className="inventory-csv-mode-label">导入方式</span>
+                  <div className="inventory-csv-mode-toggle" role="group" aria-label="CSV 导入方式">
+                    <button
+                      type="button"
+                      className={csvMode === 'add' ? 'active' : ''}
+                      aria-pressed={csvMode === 'add'}
+                      disabled={submitting}
+                      onClick={() => setCsvMode('add')}
+                    >
+                      新增
+                    </button>
+                    <button
+                      type="button"
+                      className={csvMode === 'replace' ? 'active replace' : ''}
+                      aria-pressed={csvMode === 'replace'}
+                      disabled={submitting}
+                      onClick={() => setCsvMode('replace')}
+                    >
+                      覆盖
+                    </button>
+                  </div>
+                </div>
+                <p className={`inventory-csv-mode-hint${csvMode === 'replace' ? ' is-warning' : ''}`}>
+                  {csvMode === 'add'
+                    ? '新增：CSV 数量会累加到已有库存；0 不会改变库存。'
+                    : '覆盖：CSV 数量会替换已有库存；0 会将对应色号清零。'}
+                </p>
+                {csvMode === 'add' && csvImportItemCount === 0 && (
+                  <p className="inventory-csv-zero-note">
+                    当前文件的非空数量全部为 0，新增模式不会修改库存。
+                  </p>
+                )}
+              </>
+            )}
             <div className="inventory-csv-actions">
-              {csvPreview.errors.length === 0 && csvPreview.items.length > 0 && (
+              {csvPreview.errors.length === 0 && csvImportItemCount > 0 && (
                 <button
                   type="button"
-                  className="primary"
+                  className={`primary${csvMode === 'replace' ? ' is-replace' : ''}`}
                   disabled={submitting}
                   onClick={() => void handleCsvImport()}
                 >
-                  {submitting ? '导入中…' : `确认覆盖 ${csvPreview.items.length} 个色号`}
+                  {submitting
+                    ? '导入中…'
+                    : `确认${csvMode === 'add' ? '新增' : '覆盖'} ${csvImportItemCount} 个色号`}
                 </button>
               )}
               <button
@@ -576,6 +632,7 @@ export default function InventoryTab({
                 onClick={() => {
                   csvReadRef.current += 1
                   setCsvPreview(null)
+                  setCsvMode('add')
                   setCsvReading(false)
                 }}
               >

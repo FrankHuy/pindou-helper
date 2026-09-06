@@ -94,6 +94,8 @@ Always skim [Quality Guidelines](./quality-guidelines.md) for privacy and depend
 5. **Clamp-to-zero deduct** — finish never produces negative balances; shortage gap is returned as informational, not a 409 error.
 6. **Spreadsheet grid** — series letters as rows, numeric suffixes as columns; only codes in the selected palette scope are visible/editable.
 7. **Global per-user threshold** — single low stock threshold (default 100), editable in inventory tab.
+8. **CSV import mode is explicit** — preview defaults to additive import; overwrite is a deliberate,
+   per-file choice that resets on file/account changes.
 
 ### XHS
 

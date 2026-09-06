@@ -144,7 +144,7 @@ export async function handleSetQuantity(
   return jsonOk(toInventoryResponse(records, settings.lowStockThreshold, settings.updatedAt))
 }
 
-/** PUT /api/inventory/import — atomic CSV-derived quantity overwrite. */
+/** PUT /api/inventory/import — atomic CSV-derived additive or replacement import. */
 export async function handleImportInventory(
   request: Request,
   env: { DB: D1Database },
@@ -154,8 +154,14 @@ export async function handleImportInventory(
 
   const parsed = await readJsonBody(request)
   if (!parsed.ok) return parsed.response
-  if (Object.keys(parsed.body).some((key) => key !== 'items')) {
-    return jsonError(400, 'invalid_request', '导入请求只能包含色号与库存数量')
+  if (Object.keys(parsed.body).some((key) => key !== 'mode' && key !== 'items')) {
+    return jsonError(400, 'invalid_request', '导入请求只能包含模式、色号与库存数量')
+  }
+
+  // Missing mode preserves the original replace-only contract for already-open clients.
+  const mode = parsed.body.mode === undefined ? 'replace' : parsed.body.mode
+  if (mode !== 'add' && mode !== 'replace') {
+    return jsonError(400, 'invalid_request', '导入模式必须是 add 或 replace')
   }
 
   const rawItems = parsed.body.items
@@ -192,7 +198,14 @@ export async function handleImportInventory(
     items.push({ code, quantity })
   }
 
-  await setQuantities(env.DB, session.user.id, items)
+  if (mode === 'add') {
+    const additiveItems = items.filter((item) => item.quantity > 0)
+    if (additiveItems.length > 0) {
+      await addEntries(env.DB, session.user.id, additiveItems)
+    }
+  } else {
+    await setQuantities(env.DB, session.user.id, items)
+  }
   const [records, settings] = await Promise.all([
     loadInventory(env.DB, session.user.id),
     loadSettings(env.DB, session.user.id),

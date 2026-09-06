@@ -83,9 +83,9 @@ Prefer pure-frontend algorithms; **no new runtime deps** unless task-approved.
 9. Inventory: **login required, email verification NOT required** (gate stays on AI edit only)
 10. Inventory: deduct **clamps to 0** (never negative); shortage is informational, not 409
 11. Inventory: every mutation writes a ledger row inside the **same D1 batch** as the balance change (atomic)
-12. Inventory: only color codes and quantities transmitted — **no sheet images uploaded**'
+12. Inventory: only color codes and quantities transmitted — **no sheet images uploaded**
 13. Inventory CSV: parse the original file locally; server accepts only validated MARD
-    `{ code, quantity }[]` and derives `userId` from the current session
+    `{ mode, items }` and derives `userId` from the current session
 
 ---
 
@@ -116,12 +116,17 @@ No unit test runner mandated yet. Minimum gates:
 ### 1. Scope / Trigger
 
 - Applies whenever inventory CSV parsing, import UI, inventory API payloads, MARD catalog bounds, or
-  bulk inventory writes change. It preserves overwrite semantics, account isolation, and atomic history.
+  bulk inventory writes change. It preserves explicit add/replace semantics, account isolation, and
+  atomic history.
 
 ### 2. Signatures
 
 - `parseInventoryCsv(text, validCodes): InventoryCsvResult` is pure and browser-independent.
-- `PUT /api/inventory/import` accepts confirmed derived items only.
+- `importInventory(mode: InventoryImportMode, items: InventoryImportItem[]): Promise<InventorySnapshot>`
+  sends confirmed derived items only.
+- `PUT /api/inventory/import` accepts `mode: 'add' | 'replace'` plus items; a missing legacy mode means
+  `replace`, while any unknown value is invalid.
+- `addEntries(db, userId, positiveItems): Promise<void>` owns additive upserts plus `entry` ledger rows.
 - `setQuantities(db, userId, items): Promise<void>` owns conditional ledger SQL plus bulk upserts;
   compute each old balance inside the same D1 batch, before its corresponding upsert.
 - `normalizeMardCode(raw): string | null` is the Worker-side catalog gate; its bounds must stay in
@@ -130,12 +135,14 @@ No unit test runner mandated yet. Minimum gates:
 ### 3. Contracts
 
 - CSV matrix: first cell `系列`, positive integer suffix columns, unique alphabetic series rows.
-- Non-empty cell means exact particle balance overwrite; blank means unchanged; `0` means clear.
-- Request: `{ items: Array<{ code: string; quantity: number }> }`, 1–291 unique real MARD codes.
+- UI mode defaults to `add`; new file, cancel, and account change all reset it to `add`. Never persist
+  a prior overwrite choice.
+- In `add`, positive cells increase balance and use `entry`; blank and `0` are no-ops.
+- In `replace`, non-empty cells set absolute balance and use `adjust`; blank is unchanged and `0` clears.
+- Request: `{ mode, items: Array<{ code: string; quantity: number }> }`, 1–291 unique real MARD codes.
 - Response: the current session user's `InventorySnapshot`; no client `userId` is accepted.
 - The browser may display the local filename, but neither filename nor original CSV text is sent.
-- Changed balances write `reason = 'adjust'` with `delta = new - old`; unchanged balances write no
-  zero-delta ledger row.
+- New clients always send mode; missing mode is replace-only compatibility for already-open old clients.
 
 ### 4. Validation & Error Matrix
 
@@ -143,17 +150,23 @@ No unit test runner mandated yet. Minimum gates:
 |---|---:|---|
 | BOM, CRLF/LF, quoted fields | Allowed after local parse | Same normalized matrix result |
 | Blank quantity | Omitted | Existing balance unchanged |
+| `add`, positive quantity | One D1 batch | Existing balance plus quantity; `entry` delta equals quantity |
+| `add`, zero-only items | Allowed, no batch | Existing balances and ledger unchanged |
+| `replace`, zero quantity | One D1 batch | Balance cleared; non-zero `adjust` delta records actual change |
+| Missing mode from old client | One D1 batch | Preserve legacy `replace` behavior |
+| Unknown mode | No | `400 invalid_request` before any D1 mutation |
 | Negative, decimal, unsafe integer | No | Chinese row/column error |
 | Duplicate suffix/series/code | No | Reject the whole import |
 | Unknown MARD code | No | Client parser and Worker both reject |
 | File over 1 MiB / more than 291 items | No | Reject before any D1 mutation |
 | Extra request/item field, including `userId` | No | `400 invalid_request` |
-| Valid confirmed items | One D1 batch | Upserts and non-zero `adjust` rows are atomic |
+| Valid confirmed items | At most one D1 batch | Mode-specific upserts and ledger rows are atomic |
 
 ### 5. Good/Base/Bad Cases
 
-- Good: `系列,1,2` plus `A,100,0` sets A1 to 100 and clears A2 for the signed-in user.
-- Base: `A,,25` leaves A1 unchanged and overwrites only A2.
+- Good: with A1 at 80, `add` plus `A,100` produces 180 and an `entry +100` ledger row.
+- Base: with A1 at 80, `replace` plus `A,100` produces 100 and an `adjust +20` ledger row.
+- Zero: `add` plus `A,0` does nothing; `replace` plus `A,0` clears A1.
 - Bad: a malformed quote, `ZZ999`, duplicate `A` row, or client-supplied `userId` performs no write.
 
 ### 6. Tests Required
@@ -161,8 +174,8 @@ No unit test runner mandated yet. Minimum gates:
 - Parser harness: valid subset, blank/zero, BOM, CRLF, quotes/escaped quotes, duplicate row/column,
   unknown code, negative/decimal, malformed quote, 1 MiB limit, and 291-item cap.
 - Catalog parity: all `MARD_COLORS` pass `normalizeMardCode`, count is 291, and out-of-range codes fail.
-- Handler/D1 harness: request `userId` cannot override session ID; invalid payloads call no batch;
-  valid overwrite uses one batch and records actual non-zero deltas for that session user.
+- Handler/D1 harness: cover add, replace, legacy missing mode, unknown mode, zero-only add, and request
+  `userId`; assert session-only bindings, correct ledger reason/delta, and invalid-payload no-write.
 - Run `npm run build`, `npm run lint`, and `git diff --check`; manually inspect narrow/light/dark UI.
 
 ### 7. Wrong vs Correct
@@ -171,10 +184,11 @@ No unit test runner mandated yet. Minimum gates:
 // Wrong: upload the CSV or trust an account identifier from the browser.
 await fetch('/api/inventory/import', { body: JSON.stringify({ userId, csvText }) })
 
-// Correct: parse locally and send only confirmed derived values; Worker uses session.user.id.
+// Correct: parse locally, require a visible mode choice, and let Worker use session.user.id.
 const { items, errors } = parseInventoryCsv(csvText, validCodes)
-if (errors.length === 0) await importInventory(items)
-await setQuantities(env.DB, session.user.id, items)
+if (errors.length === 0) await importInventory(csvMode, items)
+if (mode === 'add') await addEntries(env.DB, session.user.id, positiveItems)
+else await setQuantities(env.DB, session.user.id, items)
 ```
 
 ## Scenario: Production auth mail via Resend
